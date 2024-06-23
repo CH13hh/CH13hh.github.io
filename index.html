@@ -255,15 +255,15 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h2 class="index-header">
         
-        <a href="/2024/06/22/blog/" target="_self">
-          blog
+        <a href="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/" target="_self">
+          常回家看看之off_by_one
         </a>
       </h2>
 
       
-      <a class="index-excerpt index-excerpt__noimg" href="/2024/06/22/blog/" target="_self">
+      <a class="index-excerpt index-excerpt__noimg" href="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/" target="_self">
         <div>
-          
+          ❗off_by_one这个漏洞比较特殊，它不像上一期的堆溢出，可以溢出很多字节，它只能溢出一个字节，在栈里面也可以通过这个漏洞修改返回地址什么的，在堆里面我们主要利用它来修改堆块的大小，形成fake_chunk也就可以进行堆的重叠，在64位的时候如果申请0x18，0x28，0x38这样的堆它的size位是0x21，0x31和0x41，那为什么，头部0x10加申请的0x18大小已经是0x28大小了为
         </div>
       </a>
 
