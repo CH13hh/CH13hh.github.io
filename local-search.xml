@@ -4,6 +4,32 @@
   
   
   <entry>
+    <title>666</title>
+    <link href="/2024/08/02/777/"/>
+    <url>/2024/08/02/777/</url>
+    
+    <content type="html"><![CDATA[<p><img src="/2024/08/02/777/image-20240802200531376.png" alt="image-20240802200531376"></p>]]></content>
+    
+    
+    
+  </entry>
+  
+  
+  
+  <entry>
+    <title>常回家看看之fastbin_attack</title>
+    <link href="/2024/08/02/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bfastbin-attack/"/>
+    <url>/2024/08/02/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bfastbin-attack/</url>
+    
+    <content type="html"><![CDATA[<h3 id="常回家看看之fastbin-attack"><a href="#常回家看看之fastbin-attack" class="headerlink" title="常回家看看之fastbin_attack"></a><strong>常回家看看之fastbin_attack</strong></h3><h3 id="原理分析"><a href="#原理分析" class="headerlink" title="原理分析"></a><strong>原理分析</strong></h3><p>fastbin属于小堆块的管理，这里说的fastbin_attack大多指glibc2.26之前的手法，因为自glibc2.26以后，glibc迎来了一位新成员tcachebin，它减少了堆的开销，使堆管理变得迅速而高效，而且申请的小堆块会优先进入tachebin中，只有tachebin其中一个链表满了再次申请一个相同大小的堆块，若是小堆块再次free会进入fastbin中。</p><p>下面主要看一下fastbin，在glibc2.26以前对fastbin double free的检查没有那么严格，也就是说，如果程序里面有UAF漏洞，我们只要free第一个堆块之后free一个别的堆块，再次free第一个堆块，导致double free，实现堆块的伪造和堆块重叠。</p><p>也就是如下这种情况</p><p><img src="/2024/08/02/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bfastbin-attack/image-20240802185607035.png" alt="image-20240802185607035"></p><p>在pwngdb里面是这样的</p><p><img src="/2024/08/02/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bfastbin-attack/image-20240802185652506.png" alt="image-20240802185652506"></p><p>那么下次申请堆块的时候会把chunk0申请走，如果此时修改了chunk0的fd指针那么就导致把fake_chunk加入到fastbin链表中</p><p>就是如下这种情况</p><p><img src="/2024/08/02/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bfastbin-attack/image-20240802185852246.png" alt="image-20240802185852246"></p><p>那么就可以实现堆块重叠</p><h3 id="例题演示"><a href="#例题演示" class="headerlink" title="例题演示"></a>例题演示</h3><h4 id="题目保护情况"><a href="#题目保护情况" class="headerlink" title="题目保护情况"></a>题目保护情况</h4><p><img src="/2024/08/02/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bfastbin-attack/image-20240802191222008.png" alt="image-20240802191222008"></p><h4 id="64位ida逆向"><a href="#64位ida逆向" class="headerlink" title="64位ida逆向"></a>64位ida逆向</h4><p>菜单</p><p><img src="/2024/08/02/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bfastbin-attack/image-20240802191623680.png" alt="image-20240802191623680"></p><p>add函数，存在堆块数量上限，申请堆块之前申请了一个0x28大小的控制堆块，在控制堆块+8位置写上数据堆块地址，然后最后可以向控制堆块+16处的地址可以输入23字节的数据</p><p><img src="/2024/08/02/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bfastbin-attack/image-20240802191904959.png" alt="image-20240802191904959"></p><p>free函数，存在UAF漏洞，及可以double free</p><p><img src="/2024/08/02/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bfastbin-attack/image-20240802192240600.png" alt="image-20240802192240600"></p><p>show函数，没有实际的功能</p><p><img src="/2024/08/02/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bfastbin-attack/image-20240802193847109.png" alt="image-20240802193847109"></p><h4 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h4><p>程序没有show功能，我们申请堆块的时候先申请到的控制堆块，然后才是自己输入的size的堆块，但是大小有限制导致不难申请到unsortbin范围大小的chunk，但是我们可以向控制堆块输入内容，导致可以伪造chunk的size位，泄露libc地址只能位置堆块实现堆块重叠，程序存在UAF漏洞，可以double free 从而可以伪造堆块，修改size为unsortbin 大小的范围然后free掉堆块</p><p>此时堆块情况</p><p><img src="/2024/08/02/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bfastbin-attack/image-20240802194449553.png" alt="image-20240802194449553"></p><p>但是此时堆块size位为0x91，申请堆块的时候fastbin有检查，因此我们要复原堆块的size，但是由于没有show功能，所以可以申请堆块到IO结构体上，修改_IO_write_base 导致泄露libc地址，远程的话需要爆破高字节。</p><p><img src="/2024/08/02/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bfastbin-attack/image-20240802194908254.png" alt="image-20240802194908254"></p><p>堆块7为了防止申请堆块的时候控制堆块切割unsortbin chunk。</p><p><img src="/2024/08/02/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bfastbin-attack/image-20240802195055497.png" alt="image-20240802195055497"></p>]]></content>
+    
+    
+    
+  </entry>
+  
+  
+  
+  <entry>
     <title>DASCTF2022.07赋能赛PWN部分WP</title>
     <link href="/2024/08/02/DASCTF2022.07%E8%B5%8B%E8%83%BD%E8%B5%9B/"/>
     <url>/2024/08/02/DASCTF2022.07%E8%B5%8B%E8%83%BD%E8%B5%9B/</url>
