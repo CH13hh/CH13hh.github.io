@@ -1,0 +1,771 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/wod.jpg">
+  <link rel="icon" href="/img/wod.jpg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="CH13hh">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="❗off_by_one这个漏洞比较特殊，它不像上一期的堆溢出，可以溢出很多字节，它只能溢出一个字节，在栈里面也可以通过这个漏洞修改返回地址什么的，在堆里面我们主要利用它来修改堆块的大小，形成fake_chunk也就可以进行堆的重叠，在64位的时候如果申请0x18，0x28，0x38这样的堆它的size位是0x21，0x31和0x41，那为什么，头部0x10加申请的0x18大小已经是0x28大小了为">
+<meta property="og:type" content="article">
+<meta property="og:title" content="常回家看看之off_by_one">
+<meta property="og:url" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/index.html">
+<meta property="og:site_name" content="CH13hh">
+<meta property="og:description" content="❗off_by_one这个漏洞比较特殊，它不像上一期的堆溢出，可以溢出很多字节，它只能溢出一个字节，在栈里面也可以通过这个漏洞修改返回地址什么的，在堆里面我们主要利用它来修改堆块的大小，形成fake_chunk也就可以进行堆的重叠，在64位的时候如果申请0x18，0x28，0x38这样的堆它的size位是0x21，0x31和0x41，那为什么，头部0x10加申请的0x18大小已经是0x28大小了为">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520190845849-524487537.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520191026288-169896448.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520191446287-2046407423.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520191840903-1267124445.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520191929824-1611380561.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520192030882-1418484235.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520192550050-333329489.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520193129898-1477590147.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520193309126-1467934739.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520193407886-1794926709.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520193451595-1235718211.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520193748168-1655975698.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520194517228-463098578.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520201940088-463770924.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520202410554-1350812995.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520202841301-1425173380.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520203216796-374983126.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520203336285-12755324.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520203512640-591901248.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520203653485-1583472558.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520203920652-1686364780.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520204048024-728234753.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520204342472-1588758804.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520204822714-1846554124.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520204922743-127383576.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520205049154-2010944746.png">
+<meta property="article:published_time" content="2024-06-22T10:59:31.000Z">
+<meta property="article:modified_time" content="2024-08-02T12:23:20.286Z">
+<meta property="article:author" content="CH13hh">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://ch13hh.github.io/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520190845849-524487537.png">
+  
+  
+  
+  <title>常回家看看之off_by_one - CH13hh</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"ch13hh.github.io","root":"/","version":"1.9.7","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":"AWdKxtM41CcPxu2EZoBdWpas-gzGzoHsz","app_key":"idRJngxDPrsuLA4G1dKyEewP","server_url":"https://awdkxtm4.lc-cn-n1-shared.com","path":"window.location.pathname","ignore_local":true}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+    <!-- Google tag (gtag.js) -->
+    <script async>
+      if (!Fluid.ctx.dnt) {
+        Fluid.utils.createScript("https://www.googletagmanager.com/gtag/js?id=", function() {
+          window.dataLayer = window.dataLayer || [];
+          function gtag() {
+            dataLayer.push(arguments);
+          }
+          gtag('js', new Date());
+          gtag('config', '');
+        });
+      }
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 7.2.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>CH13hh</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/" target="_self">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/zhuye.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="常回家看看之off_by_one"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-06-22 18:59" pubdate>
+          2024年6月22日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          711 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          6 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">常回家看看之off_by_one</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p><strong>❗off_by_one</strong>这个漏洞<strong>比较特殊，</strong>它不像上一期的<strong>堆溢出，可以溢出很多字节，它只能溢出一个字节，</strong>在栈里面也可以通过这个漏洞修改返回地址什么的，在堆里面我们主要利用它来修改<strong>堆块的大小</strong>，<strong>形成fake_chunk也就可以进行堆的重叠</strong>，在64位的时候如果申请0x18，0x28，0x38这样的堆它的size位是0x21，0x31和0x41，那为什么，头部0x10加申请的0x18大小已经是0x28大小了为啥size还是0x21，<strong>别忘了，当上一个chunk正在使用的时候下一个chunk的prev_size位也拿来当我们的数据部分。</strong></p>
+<p><strong>那么我们就可以利用这个特性来进行off_by_one,那样就可以修改下一个chunk的size位。</strong></p>
+<p><strong>我们拿一道题目来具体复现一下这个漏洞。✅</strong></p>
+<p><strong>题目链接：<a target="_blank" rel="noopener" href="https://pan.baidu.com/s/1BBT95PNOuffZv1r_1Cacbg?pwd=kj9t">https://pan.baidu.com/s/1BBT95PNOuffZv1r_1Cacbg?pwd&#x3D;kj9t </a><br>提取码：kj9t</strong></p>
+<p><strong>1.养成好习惯首先看保护</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520190845849-524487537.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520190845849-524487537"></p>
+<p><strong>2.不如不看🙃，哈哈，开玩笑的，保护全开，但是不要慌，对于堆题目这很正常，我们用64位ida看一下</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520191026288-169896448.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520191026288-169896448"></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520191446287-2046407423.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520191446287-2046407423"></p>
+<p><strong>3.还是一些功能函数，add添加chunk</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520191840903-1267124445.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520191840903-1267124445"></p>
+<p><strong>4.edit函数</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520191929824-1611380561.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520191929824-1611380561"></p>
+<p><strong>这里主要在输入size的时候进行了一次判断，就是sub_E3A这个函数</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520192030882-1418484235.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520192030882-1418484235"></p>
+<p><strong>如果输入的size减去申请chunk的size等于10的话会返回a1加1，也就是我们在chunk size的基础上可以多输入一个字节，满足off_by_one</strong></p>
+<p><strong>5.show函数和delete函数</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520192550050-333329489.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520192550050-333329489"></p>
+<p><strong>我们先申请两个chunk，第一个是0x18,0x28,0x38之类的</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520193129898-1477590147.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520193129898-1477590147"></p>
+<p><strong>现在编辑第一个堆进行溢出一个字节修改下一个chunk的size位</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520193309126-1467934739.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520193309126-1467934739"></p>
+<p><strong>修改之前</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520193407886-1794926709.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520193407886-1794926709"></p>
+<p><strong>修改之后</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520193451595-1235718211.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520193451595-1235718211"></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520193748168-1655975698.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520193748168-1655975698"></p>
+<p><strong>注意此时虽然修改成功了，但是堆结构被我们破坏了，top chunk距离上一个chunk距离不是0x40了，所以我们继续申请一个堆，来恢复堆结构</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520194517228-463098578.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520194517228-463098578"></p>
+<p><strong>恢复之后此时堆结构</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520201940088-463770924.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520201940088-463770924"></p>
+<p><strong>之后我们把chunk1 free掉</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520202410554-1350812995.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520202410554-1350812995"></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520202841301-1425173380.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520202841301-1425173380"></p>
+<p><strong>我们再次申请回来，发现原来的0x91不见了</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520203216796-374983126.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520203216796-374983126"></p>
+<p><strong>那么我们再次构造unsortbin chunk</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520203336285-12755324.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520203336285-12755324"></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520203512640-591901248.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520203512640-591901248"></p>
+<p><strong>我们free2 的时候就会得到unsortbin，但是记得再申请一个堆，不然free的时候会和top chunk合并</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520203653485-1583472558.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520203653485-1583472558"></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520203920652-1686364780.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520203920652-1686364780"></p>
+<p><strong>在2.23版本里面泄露出的地址-0x58就是main_arena的地方而main_arena-0x10就是__malloc_hook地址</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520204048024-728234753.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520204048024-728234753"></p>
+<p><strong>然后这里使用fatsbin attack 申请到_malloc_hook和recalloc_hook附近修改它们的值，（一般都是__malloc_hook-0x23）</strong></p>
+<p><strong>因为这里符合size的结构</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520204342472-1588758804.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520204342472-1588758804"></p>
+<p><strong>这里要注意并不是修改__malloc_hook为one_gadget就可以getshell，通常可以使用****realloc_hook 调整栈帧使 onegadget 生效</strong></p>
+<p><strong>将 malloc_hook 劫持为 realloc ，realloc_hook 劫持为 onegadget ，实际运行顺序：</strong></p>
+<figure class="highlight xl"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs xl"><span class="hljs-function"><span class="hljs-title">malloc</span> -&gt;</span> <span class="hljs-function"><span class="hljs-title">malloc_hook</span> -&gt;</span> <span class="hljs-function"><span class="hljs-title">realloc</span> -&gt;</span> <span class="hljs-function"><span class="hljs-title">realloc_hook</span> -&gt;</span> onegadget<br></code></pre></td></tr></table></figure>
+
+<p><strong>这样就能经过 realloc 调整栈帧后再运行 onegadget 。但是实际情况中，并不是直接劫持 malloc_hook 为 realloc ，而是要加上一定的偏移，也就是调整 push 的数量，让栈帧结构满足 onegadget 运行</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520204822714-1846554124.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520204822714-1846554124"></p>
+<p><strong>最后放上exp: 代码还是有点多的</strong></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520204922743-127383576.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520204922743-127383576"></p>
+<p><img src="/2024/06/22/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Boff_by_one/3419447-20240520205049154-2010944746.png" srcset="/img/loading.gif" lazyload alt="3419447-20240520205049154-2010944746"></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>常回家看看之off_by_one</div>
+      <div>https://ch13hh.github.io/2024/06/22/常回家看看之off_by_one/</div>
+    </div>
+    <div class="license-meta">
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年6月22日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/" title="DASCTF X GFCTF 2022十月挑战赛-PWN-WP">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">DASCTF X GFCTF 2022十月挑战赛-PWN-WP</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://lib.baomitu.com/valine/1.5.1/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"AWdKxtM41CcPxu2EZoBdWpas-gzGzoHsz","appKey":"idRJngxDPrsuLA4G1dKyEewP","path":"window.location.pathname","placeholder":"说点什么","avatar":"retro","meta":["nick","mail","link"],"requiredFields":[],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"","emojiCDN":null,"emojiMaps":null,"enableQQ":false},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

